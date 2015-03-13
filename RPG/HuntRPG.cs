@@ -94,6 +94,7 @@ namespace Oxide.Ext.Hunt.RPG
             {
                 var randomFloat = Random(0, 1);
                 RPGInfo rpgInfo = RPGInfo(player);
+                CurrentHealth(rpgInfo, player);
                 var evasion = GetEvasion(rpgInfo);
                 bool evaded = randomFloat <= evasion;
                 if (evaded)
@@ -387,11 +388,6 @@ namespace Oxide.Ext.Hunt.RPG
             {
                 myFieldInfo.SetValue(player, GetMaxHealth(RPGInfo(player)));
             }
-        }
-
-        public void OnHealthChanged(BasePlayer player)
-        {
-            CurrentHealth(RPGInfo(player), player);
         }
     }
 }

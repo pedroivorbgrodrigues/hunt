@@ -388,5 +388,10 @@ namespace Oxide.Ext.Hunt.RPG
                 myFieldInfo.SetValue(player, GetMaxHealth(RPGInfo(player)));
             }
         }
+
+        public void OnHealthChanged(BasePlayer player)
+        {
+            CurrentHealth(RPGInfo(player), player);
+        }
     }
 }

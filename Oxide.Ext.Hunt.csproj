@@ -33,20 +33,31 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\Oxide.Ext.Rust\Dependencies\Assembly-CSharp.dll</HintPath>
+      <HintPath>lib\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Oxide.Core\Dependencies\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>lib\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Oxide.Core">
+      <HintPath>lib\Oxide.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Oxide.Ext.CSharp">
+      <HintPath>lib\Oxide.Ext.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Oxide.Ext.Rust">
+      <HintPath>lib\Oxide.Ext.Rust.dll</HintPath>
+    </Reference>
+    <Reference Include="Oxide.Ext.Unity">
+      <HintPath>lib\Oxide.Ext.Unity.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>..\Oxide.Ext.Rust\Dependencies\UnityEngine.dll</HintPath>
+      <HintPath>lib\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -65,24 +76,6 @@
     <Compile Include="RPG\RPGInfo.cs" />
     <Compile Include="RPG\Skill.cs" />
     <Compile Include="RPG\SkillsDelegates.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Oxide.Core\Oxide.Core.csproj">
-      <Project>{67F65F5D-A62A-4752-849D-BFF30D828107}</Project>
-      <Name>Oxide.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Oxide.Ext.CSharp\Oxide.Ext.CSharp.csproj">
-      <Project>{9103D682-D1AA-4A95-A499-896F551AAA62}</Project>
-      <Name>Oxide.Ext.CSharp</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Oxide.Ext.Rust\Oxide.Ext.Rust.csproj">
-      <Project>{87568E26-BF3C-4A14-A3C4-8B74616D6FA9}</Project>
-      <Name>Oxide.Ext.Rust</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Oxide.Ext.Unity\Oxide.Ext.Unity.csproj">
-      <Project>{52C26C5B-23E5-48A2-B403-5FF5C898E91A}</Project>
-      <Name>Oxide.Ext.Unity</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

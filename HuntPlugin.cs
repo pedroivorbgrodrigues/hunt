@@ -117,6 +117,12 @@ namespace Oxide.Ext.Hunt
             HuntRPGInstance.InitPlayer(player);
         }
 
+        [HookMethod("OnHealthChanged")]
+        void OnHealthChanged(BasePlayer player)
+        {
+            HuntRPGInstance.OnHealthChanged(player);
+        }
+
         [HookMethod("OnEntityAttacked")]
         object OnEntityAttacked(MonoBehaviour entity, HitInfo hitInfo)
         {

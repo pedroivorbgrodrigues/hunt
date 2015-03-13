@@ -29,6 +29,7 @@ namespace Oxide.Ext.Hunt.RPG
             messagesConfig.AddMessage("help", new List<string>
             {
                 "To get an overview about the Hunt RPG, type \"/hunt about\"",
+                "To see you available shortcuts commdands, type \"/hunt shortcuts\"",
                 "To see you player profile, type \"/hunt profile\"",
                 "To see the skill list type \"/hunt skilllist\"",
                 "To spend your available stats points, type \"/hunt statset <stats> <points> \". Ex: /hunt statset agi 3",
@@ -38,6 +39,8 @@ namespace Oxide.Ext.Hunt.RPG
             {
                 "\"/hunt\" = \"/h\"",
                 "\"/hunt profile\" = \"/h p\"",
+                "\"/hunt statset\" = \"/h sts\"",
+                "\"/hunt skillset\" = \"/h sks\"",
             });
 
             messagesConfig.AddMessage(HMK.InvalidCommand, "You ran the \"{0}\" command incorrectly. Type \"/hunt help\" to get help");

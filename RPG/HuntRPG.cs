@@ -17,7 +17,9 @@ namespace Oxide.Ext.Hunt.RPG
         private Dictionary<int, long> XPTable;
         private readonly HuntPlugin PluginInstance;
         readonly Random RandomGenerator = new Random();
-        const float MaxEvasion = (float)(HK.MaxLevel * 8);
+        const float MaxCraftingTimeReducer = HK.MaxLevel * 7;
+        const float MaxEvasion = HK.MaxLevel * 8;
+        const float MaxHealth = HK.MaxLevel * 8;
 
         public HuntRPG(HuntPlugin pluginInstance)
         {
@@ -58,6 +60,10 @@ namespace Oxide.Ext.Hunt.RPG
 
             switch (args[0].ToLower())
             {
+                case "h":
+                case "health":
+                    ChatMessage(player, CurrentHealth(rpgInfo, player));
+                    break;
                 case "p":
                 case "profile":
                     DisplayProfile(player);
@@ -72,7 +78,7 @@ namespace Oxide.Ext.Hunt.RPG
                     break;
                 case "lvlup":
                     LevelUp(player, args, rpgInfo);
-                break;
+                    break;
                 default:
                     ChatMessage(player, MessagesTable.GetMessage("help"));
                     break;
@@ -103,9 +109,34 @@ namespace Oxide.Ext.Hunt.RPG
             return evasion;
         }
 
+        private float GetMaxHealth(RPGInfo rpgInfo)
+        {
+            var healthMultiplier = (float) (rpgInfo.Strength/MaxHealth);
+            var extraHealht = rpgInfo.Strength * healthMultiplier;
+            return 100 + extraHealht;
+        }
+
+        private static float GetCraftingReducer(RPGInfo rpgInfo)
+        {
+            return rpgInfo.Intelligence / MaxCraftingTimeReducer;
+        }
+
         double Random(double a, double b)
         {
             return a + RandomGenerator.NextDouble() * (b - a);
+        }
+
+        public ItemCraftTask OnItemCraft(ItemCraftTask item)
+        {
+            BasePlayer player = item.owner;
+            var rpgInfo = RPGInfo(player);
+            float craftingTime = item.blueprint.time;
+            float craftingReducer = GetCraftingReducer(rpgInfo);
+            var amountToReduce = (craftingTime*craftingReducer);    
+            float reducedCraftingTime = craftingTime - amountToReduce;
+            item.endTime = UnityEngine.Time.time + reducedCraftingTime;
+            ChatMessage(player, String.Format("Crafting reduced by {0}", amountToReduce));
+            return item;
         }
 
         public void OnGather(ResourceDispenser dispenser, BaseEntity entity, Item item)
@@ -171,18 +202,20 @@ namespace Oxide.Ext.Hunt.RPG
             return String.Format("XP: {0:P}", percent);
         }
 
-        public string Profile(RPGInfo rpgInfo)
+        public string Profile(RPGInfo rpgInfo, BasePlayer player)
         {
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine(String.Format("========{0}========", rpgInfo.SteamName));
             sb.AppendLine(String.Format("Level: {0}", rpgInfo.Level));
+            sb.AppendLine(CurrentHealth(rpgInfo, player));
+            sb.AppendLine(String.Format("Evasion Chance: {0:P}", GetEvasion(rpgInfo)));
+            sb.AppendLine(String.Format("Crafting Reducer: {0:P}", GetCraftingReducer(rpgInfo)));
             sb.AppendLine(XPProgression(rpgInfo));
             sb.Append(String.Format("<color={0}>Agi: {1}</color> | ","green", rpgInfo.Agility));
             sb.Append(String.Format("<color={0}>Str: {1}</color> | ", "red", rpgInfo.Strength));
             sb.Append(String.Format("<color={0}>Int: {1}</color>", "blue", rpgInfo.Intelligence));
             sb.AppendLine();
-            sb.AppendLine(String.Format("Evasion Chance: {0}", GetEvasion(rpgInfo)));
             sb.AppendLine(String.Format("Stats Points: {0}", rpgInfo.StatsPoints));
             sb.AppendLine(String.Format("Skill Points: {0}", rpgInfo.SkillPoints));
             sb.AppendLine(String.Format("========<color={0}>Skills</color>========", "purple"));
@@ -192,7 +225,10 @@ namespace Oxide.Ext.Hunt.RPG
             return sb.ToString();
         }
 
-
+        private string CurrentHealth(RPGInfo rpgInfo, BasePlayer player)
+        {
+            return String.Format("Health: {0}/{1}", player.Health(), GetMaxHealth(rpgInfo));
+        }
 
         private void ChatMessage(BasePlayer player, IEnumerable<string> messages)
         {
@@ -268,7 +304,10 @@ namespace Oxide.Ext.Hunt.RPG
                             break;
                         case "str":
                             if (rpgInfo.AddStr(points))
+                            {
+                                SetMaxHealth(player);
                                 pointsSpent.Add(String.Format("<color={0}>Str: +{1}</color>", "red", points));
+                            }
                             else
                                 pointsSpent.AddRange(MessagesTable.GetMessage(HMK.NotEnoughtPoints));
                             break;
@@ -326,7 +365,7 @@ namespace Oxide.Ext.Hunt.RPG
 
         public void DisplayProfile(BasePlayer player)
         {
-            ChatMessage(player, Profile(RPGInfo(player)));
+            ChatMessage(player, Profile(RPGInfo(player), player));
         }
 
         public void OnDeath(BasePlayer player)
@@ -336,13 +375,17 @@ namespace Oxide.Ext.Hunt.RPG
 
         public void InitPlayer(BasePlayer player)
         {
+            SetMaxHealth(player);
             DisplayProfile(player);
-            Type typeOf = typeof (BaseCombatEntity);
-            FieldInfo myFieldInfo = typeOf.GetField("_maxHealth", BindingFlags.NonPublic | BindingFlags.Instance);
+        }
+
+        private void SetMaxHealth(BasePlayer player)
+        {
+            var typeOf = typeof (BaseCombatEntity);
+            var myFieldInfo = typeOf.GetField("_maxHealth", BindingFlags.NonPublic | BindingFlags.Instance);
             if (myFieldInfo != null)
             {
-                myFieldInfo.SetValue(player, 300);
-                ChatMessage(player, String.Format("Current Max Heatlh: {0}",myFieldInfo.GetValue(player)));
+                myFieldInfo.SetValue(player, GetMaxHealth(RPGInfo(player)));
             }
         }
     }

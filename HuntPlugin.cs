@@ -136,6 +136,12 @@ namespace Oxide.Ext.Hunt
             HuntRPGInstance.OnDeath(player);
         }
 
+        [HookMethod("OnItemCraft")]
+        ItemCraftTask OnItemCraft(ItemCraftTask item)
+        {
+            return HuntRPGInstance.OnItemCraft(item);
+        }
+
         [HookMethod("OnGather")]
         void OnGather(ResourceDispenser dispenser, BaseEntity entity, Item item)
         {

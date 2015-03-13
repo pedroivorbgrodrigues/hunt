@@ -8,10 +8,10 @@ namespace Oxide.Ext.Hunt.RPG
     {
         const string IncorrectNumberOfParameters = "Incorrect number of parameters";
 
-        public static Dictionary<string, Delegate> ModifiersDict = new Dictionary<string, Delegate>() { { HRK.GatherModifier, _gatherModifier } };
+        public static Dictionary<string, Delegate> ModifiersDict = new Dictionary<string, Delegate>() { { HRK.GatherModifier, GatherModifier } };
 
         // 0 - SkillPoints| 1 - LevelModule | 2 - item.amount
-        static Handler<int, int[]> _gatherModifier = delegate(int[] args)
+        static readonly Handler<int, int[]> GatherModifier = delegate(int[] args)
         {
             if (args.Length != 3)
                 throw new ArgumentException(IncorrectNumberOfParameters);

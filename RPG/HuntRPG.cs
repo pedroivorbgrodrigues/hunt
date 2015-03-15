@@ -62,6 +62,9 @@ namespace Hunt.RPG
 
             switch (args[0].ToLower())
             {
+                case "about":
+                    ChatMessage(player, MessagesTable.GetMessage(HMK.About));
+                    break;
                 case "h":
                 case "health":
                     ChatMessage(player, CurrentHealth(rpgInfo, player));
@@ -212,7 +215,7 @@ namespace Hunt.RPG
                     PluginInstance.SaveRPG(RPGConfig);
                 }
                 else
-                    ChatMessage(player, String.Format("<color=lightblue>+{0}XP</color> | {1}", experience, XPProgression(rpgInfo)));
+                    ChatMessage(player, String.Format("<color=teal>+{0}XP</color> | {1}", experience, XPProgression(rpgInfo)));
             }
         }
 

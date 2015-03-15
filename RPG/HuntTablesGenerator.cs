@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Hunt.RPG.Keys;
 
 namespace Hunt.RPG
@@ -40,8 +41,8 @@ namespace Hunt.RPG
                 "\"/hunt profile\" = \"/h p\"",
                 "\"/hunt statset\" = \"/h sts\"",
                 "\"/hunt skillset\" = \"/h sks\"",
-            });
-
+            });            
+            messagesConfig.AddMessage(HMK.About, HuntAbout());
             messagesConfig.AddMessage(HMK.InvalidCommand, "You ran the \"{0}\" command incorrectly. Type \"/hunt help\" to get help");
             messagesConfig.AddMessage(HMK.NotEnoughtPoints, "You don't have enought points to set!");
             messagesConfig.AddMessage(HMK.InvalidSkillName, "There is no such skill! Type \"/hunt skilllist\" to see the available skills");
@@ -50,6 +51,25 @@ namespace Hunt.RPG
             return messagesConfig;
         }
 
+        private static string HuntAbout()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("===============================================================");
+            sb.AppendLine("The Hunt RPG system in development.");
+            sb.AppendLine("It is consisted of levels, stats atributes, skills and later on specializations.");
+            sb.AppendLine("Currently there are 3 attributes, each of then give you and specific enhancement.");
+            sb.AppendLine("Strenght gives you more health, it will not be displayed in the Health Bar, but it is considered for healing and getting hurt.");
+            sb.AppendLine("Agillity gives you dodge change");
+            sb.AppendLine("Intelligence decreases your items crafting time");
+            sb.AppendLine("Right now you can level up by gathering resources.");
+            sb.AppendLine("Each level gives you 1 point in each attribute. And 3 more to distribute.");
+            sb.AppendLine("Each level gives you 1 skill point to distribute");
+            sb.AppendLine("Each skill have its required level, and later on it will require specific stats.");
+            sb.AppendLine("To see the all the available skills and its description type \"/hunt skilllist\"");
+            sb.AppendLine("To learn more about Hunt RPG go to the plugin page at <link>");
+            sb.AppendLine("===============================================================");
+            return sb.ToString();
+        }
 
 
         public static Dictionary<string, Skill> GenerateSkillTable()
@@ -65,7 +85,8 @@ namespace Hunt.RPG
             var hunter = new Skill(HRK.Hunter, "This skill allows you to gather resources faster from animals. Each point gives you 10% more resources per hit.", 0, 20);
             hunter.AddModifier(HRK.GatherModifier, woodAndFleshModifier);
             skillTable.Add(HRK.Hunter, hunter);
-            skillTable.Add(HRK.Researcher, new Skill(HRK.Researcher, "This skill allows you to research items you have. Each level enables a type of type to be researched. Ex: Level 1 - Tools",30, 5));
+            var description = "This skill allows you to research items you have. Each level enables a type of type to be researched. Table: Level 1 - Tools; Level 2 - Clothes; Level 3 - Construction and Resources; Level 4 - Ammunition and Medic; Level 5 - Weapons";
+            skillTable.Add(HRK.Researcher, new Skill(HRK.Researcher, description,30, 5));
             return skillTable;
         }
 
@@ -82,7 +103,7 @@ namespace Hunt.RPG
                 {ItemCategory.Tool, 1},
                 {ItemCategory.Attire, 2},
                 {ItemCategory.Construction, 3},
-                {ItemCategory.Resources, 4},
+                {ItemCategory.Resources, 3},
                 {ItemCategory.Medical, 4},
                 {ItemCategory.Ammunition, 4},
                 {ItemCategory.Weapon, 5}

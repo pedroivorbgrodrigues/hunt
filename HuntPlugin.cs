@@ -49,7 +49,7 @@ namespace Oxide.Plugins
             LoadConfig();
             Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
             var rpgConfig = Interface.GetMod().DataFileSystem.ReadObject<Dictionary<string, RPGInfo>>(HK.DataFileName);
-            Puts("{0} profiles loaded", new[] { rpgConfig.Count });
+            Puts("{0} profiles loaded", rpgConfig.Count.ToString());
             var xpTable = ReadFromConfig<Dictionary<int, long>>(HK.XPTable);
             var messagesTable = ReadFromConfig<PluginMessagesConfig>(HK.MessagesTable);
             var skillTable = ReadFromConfig<Dictionary<string, Skill>>(HK.SkillTable);
@@ -66,7 +66,7 @@ namespace Oxide.Plugins
         public void SaveRPG(Dictionary<string, RPGInfo> rpgConfig)
         {
             Interface.GetMod().DataFileSystem.WriteObject(HK.DataFileName, rpgConfig);
-            Puts("{0} profiles saved", new []{rpgConfig.Count});
+            Puts("{0} profiles saved", rpgConfig.Count.ToString());
         }
 
         [HookMethod("Init")]
@@ -135,26 +135,33 @@ namespace Oxide.Plugins
             HuntRPGInstance.OnGather(dispenser, entity, item);
         }
 
-        [ChatCommand("cmdHuntShortcut")]
+        [ChatCommand("h")]
         void cmdHuntShortcut(BasePlayer player, string command, string[] args)
         {
             cmdHunt(player, command, args);
         }
 
-        [ChatCommand("cmdHunt")]
+        [ChatCommand("hunt")]
         void cmdHunt(BasePlayer player, string command, string[] args)
         {
             HuntRPGInstance.HandleChatCommand(player, args);
         }
 
-        [ConsoleCommand("cmdResetRPG")]
+        [ConsoleCommand("hunt.saverpg")]
+        private void cmdSaveRPG(ConsoleSystem.Arg arg)
+        {
+            if (!arg.CheckPermissions()) return;
+            HuntRPGInstance.SaveRPG();
+        }
+
+        [ConsoleCommand("hunt.resetrpg")]
         private void cmdResetRPG(ConsoleSystem.Arg arg)
         {
             if (!arg.CheckPermissions()) return;
             HuntRPGInstance.ResetRPG();
         }
 
-        [ConsoleCommand("cmdGenerateXPTable")]
+        [ConsoleCommand("hunt.genxptable")]
         private void cmdGenerateXPTable(ConsoleSystem.Arg arg)
         {
             if (!arg.CheckPermissions()) return;

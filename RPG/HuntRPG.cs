@@ -1,6 +1,4 @@
-﻿// Reference: Oxide.Ext.Rust
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -19,7 +17,7 @@ namespace Hunt.RPG
         private Dictionary<string, string> ItemTable;
         private Dictionary<ItemCategory, int> ResearchTable;
         private readonly HuntPlugin PluginInstance;
-        readonly Random RandomGenerator = new Random();
+        readonly System.Random RandomGenerator = new System.Random();
         const float MaxCraftingTimeReducer = HK.MaxLevel * 7;
         const float MaxEvasion = HK.MaxLevel * 8;
         const float MaxHealth = HK.MaxLevel * 8;

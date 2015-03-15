@@ -13,24 +13,32 @@ Currently the RPG is composed of:
   * Miner : Increases the gather rate for ores and stones
   * Hunter : Increases the gather rate from animals resources
 
-You get exp when you gather stuff for now, later building stuff will give you exp to (hopefully, upgrading will give you more)
+You get exp when you gather stuff for now, later building stuff will give you exp to (hopefully, upgrading will give you more).
+
 You get 1 stat point automatically assigned to each attribute when you level up, and 3 to distribute.
+
 You get 1 skill point when you level up to distribute.
 
 There is a in game help but is not 100% done yet, but the basics are.
 **To see the list of commands type /hunt or /h**
 
-The existing skills do not require level to get,  but the code allows restraining that. Also there is a max level for the current skills, 20 for now. So getting more than 60 levels will only give you the stats benefits for now. Max level for now is 200.
+The existing skills do not require level to get,  but the code allows restraining that. 
+Also there is a max level for the current skills, 20 for now. 
+So getting more than 60 levels will only give you the stats benefits for now. 
+Max level for now is 200.
 
 **[INSTALLATION]**
+
 Just copy the .dll file to Managed folder.
 
 *There is a config file and a data file, for now I recommend not changing then.*
 
-*[COMPATIBILITY]*
+**[COMPATIBILITY]**
+
 I suggest that you dont use plugins that change the gather rate and crafting rate because the RPG will loose its purposes.
 
-*[IMPORTANT]*
+**[IMPORTANT]**
+
 Since I'm going to add plenty more features there may be needed to reset the RPG, so dont get to attached.
 
 **Please**, if you want to help with the plugin, make a push request at:
@@ -39,9 +47,13 @@ https://github.com/pedrorodrigues/hunt
 I'll check your code and probably accept the request, if that happens I can give you my contact information so we can work together.
 
 **[FORKING]**
-You are welcome to fork my code, but I would really like if you keep me in the credits. I spent a lot of time researching the assembly, not for what there is in the extension now, but for features that I wanted to do, so if you could do that, you are more than welcome to fork it.
+
+You are welcome to fork my code, but I would really like if you keep me in the credits. 
+
+I spent a lot of time researching the assembly, not for what there is in the extension now, but for features that I wanted to do, so if you could do that, you are more than welcome to fork it.
 
 **[ADMIN CHAT COMMANDS]**
+
 /hunt lvlup <desired_level> : will only level the admin character level, will give stats points and skill points to.
 
 **[NEXT FEATURES]**

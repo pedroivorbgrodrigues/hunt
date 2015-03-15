@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Oxide.Ext.Hunt.RPG
+namespace Hunt.RPG
 {
     public class PluginMessagesConfig
     {

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Oxide.Ext.Hunt.RPG.Keys;
+using Hunt.RPG.Keys;
 
-namespace Oxide.Ext.Hunt.RPG
+namespace Hunt.RPG
 {
     static class SkillsDelegates
     {

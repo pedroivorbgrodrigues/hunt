@@ -1,40 +1,47 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Hunt.RPG;
+using Hunt.RPG.Keys;
 using Newtonsoft.Json;
 using Oxide.Core;
-using Oxide.Core.Logging;
 using Oxide.Core.Plugins;
-using Oxide.Ext.Hunt.ExtensionsCore;
-using Oxide.Ext.Hunt.RPG;
-using Oxide.Ext.Hunt.RPG.Keys;
-using Oxide.Plugins;
-using Oxide.Rust.Libraries;
 using UnityEngine;
-using LogType = Oxide.Core.Logging.LogType;
 
-namespace Oxide.Ext.Hunt
+namespace Oxide.Plugins
 {
-    public class HuntPlugin : CSPlugin
+    [Info("Hunt RPG", "PedraozauM / SW", "1.0.0", ResourceId = 0)]
+    public class HuntPlugin : RustPlugin
     {
-        public readonly Logger Logger;
         private HuntRPG HuntRPGInstance;
+        private bool ServerInitialized;
+        private bool GenerateNewConfig;
 
         public HuntPlugin()
         {
-            Title = ExtensionInfo.Title;
-            Name = ExtensionInfo.Name;
-            Author = ExtensionInfo.Author;
-            Version = ExtensionInfo.Version;
             HasConfig = true;
-            ResourceId = ExtensionInfo.ResourceId;
-            Logger = Interface.GetMod().RootLogger;
         }
 
         protected override void LoadDefaultConfig()
         {
-            Config[HK.XPTable] = HuntTablesGenerator.GenerateXPTable(HK.MaxLevel, HK.BaseXP, HK.LevelMultiplier, HK.LevelModule, HK.ModuleReducer);
-            Config[HK.MessagesTable] = HuntTablesGenerator.GenerateMessageTable();
-            Config[HK.SkillTable] = HuntTablesGenerator.GenerateSkillTable();
+            GenerateNewConfig = true;
+            DefaultConfig();
+        }
+
+        private void DefaultConfig()
+        {
+            if (!ServerInitialized)
+            {
+                Config[HK.XPTable] = HuntTablesGenerator.GenerateXPTable(HK.MaxLevel, HK.BaseXP, HK.LevelMultiplier, HK.LevelModule, HK.ModuleReducer);
+                Config[HK.MessagesTable] = HuntTablesGenerator.GenerateMessageTable();
+                Config[HK.SkillTable] = HuntTablesGenerator.GenerateSkillTable();
+            }
+            else
+            {
+                if (!GenerateNewConfig) return;
+                Puts("Item Table generated");
+                Config[HK.ItemTable] = HuntTablesGenerator.GenerateItemTable();
+                SaveConfig();
+            }
+                
         }
 
         private void LoadRPG()
@@ -42,17 +49,12 @@ namespace Oxide.Ext.Hunt
             LoadConfig();
             Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
             var rpgConfig = Interface.GetMod().DataFileSystem.ReadObject<Dictionary<string, RPGInfo>>(HK.DataFileName);
-            Logger.Write(LogType.Info, String.Format("{0} profiles loaded", rpgConfig.Count));
+            Puts("{0} profiles loaded", new[] { rpgConfig.Count });
             var xpTable = ReadFromConfig<Dictionary<int, long>>(HK.XPTable);
             var messagesTable = ReadFromConfig<PluginMessagesConfig>(HK.MessagesTable);
             var skillTable = ReadFromConfig<Dictionary<string, Skill>>(HK.SkillTable);
-            if(xpTable == null)
-                Logger.Write(LogType.Error, "Failed to load XPTable");
-            if (messagesTable == null)
-                Logger.Write(LogType.Error, "Failed to load MessageTable");
-            if (skillTable == null)
-                Logger.Write(LogType.Error, "Failed to load SkillTable");
-            HuntRPGInstance.ConfigRPG(messagesTable, xpTable, skillTable,rpgConfig);
+            var itemTable = ReadFromConfig<Dictionary<string, string>>(HK.ItemTable);
+            HuntRPGInstance.ConfigRPG(messagesTable, xpTable, skillTable, itemTable, rpgConfig);
         }
 
         public T ReadFromConfig<T>(string configKey)
@@ -64,37 +66,23 @@ namespace Oxide.Ext.Hunt
         public void SaveRPG(Dictionary<string, RPGInfo> rpgConfig)
         {
             Interface.GetMod().DataFileSystem.WriteObject(HK.DataFileName, rpgConfig);
-            Logger.Write(LogType.Info, String.Format("{0} profiles saved", rpgConfig.Count));
-        }
-
-        private bool HasAccess(BasePlayer player)
-        {
-            return player.net.connection.authLevel >= 2;
-        }
-
-        [HookMethod("BuildServerTags")]
-        private void BuildServerTags(IList<string> taglist)
-        {
-            taglist.Add(ExtensionInfo.Name);
+            Puts("{0} profiles saved", new []{rpgConfig.Count});
         }
 
         [HookMethod("Init")]
         void Init()
         {
-            var library = Interface.GetMod().GetLibrary<Command>("Command");
-            library.AddConsoleCommand("hunt.xptable", this, "cmdGenerateXPTable");
-            library.AddConsoleCommand("hunt.reset", this, "cmdResetRPG");
-            library.AddChatCommand("hunt", this, "cmdHunt");
-            library.AddChatCommand("h", this, "cmdHuntShortcut");
-            Logger.Write(LogType.Info, "Hunt initialized!");
+            Puts("Hunt initialized!");
             HuntRPGInstance = new HuntRPG(this);
             if (HuntRPGInstance == null)
-                Logger.Write(LogType.Info, "Problem initializating RPG Instance!");
+                Puts("Problem initializating RPG Instance!");
         }
 
         [HookMethod("OnServerInitialized")]
         void OnServerInitialized()
         {
+            ServerInitialized = true;
+            DefaultConfig();
             LoadRPG();
         }
 
@@ -108,7 +96,6 @@ namespace Oxide.Ext.Hunt
         private void Loaded()
         {
             Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
-            LoadRPG();
         }
 
         [HookMethod("OnPlayerInit")]
@@ -148,27 +135,26 @@ namespace Oxide.Ext.Hunt
             HuntRPGInstance.OnGather(dispenser, entity, item);
         }
 
-        [HookMethod("cmdHuntShortcut")]
+        [ChatCommand("cmdHuntShortcut")]
         void cmdHuntShortcut(BasePlayer player, string command, string[] args)
         {
             cmdHunt(player, command, args);
         }
 
-        [HookMethod("cmdHunt")]
+        [ChatCommand("cmdHunt")]
         void cmdHunt(BasePlayer player, string command, string[] args)
         {
-            Logger.Write(LogType.Info, "Chat command called");
             HuntRPGInstance.HandleChatCommand(player, args);
         }
 
-        [ChatCommand("cmdResetRPG")]
-        void cmdResetRPG(ConsoleSystem.Arg arg)
+        [ConsoleCommand("cmdResetRPG")]
+        private void cmdResetRPG(ConsoleSystem.Arg arg)
         {
             if (!arg.CheckPermissions()) return;
             HuntRPGInstance.ResetRPG();
         }
 
-        [HookMethod("cmdGenerateXPTable")]
+        [ConsoleCommand("cmdGenerateXPTable")]
         private void cmdGenerateXPTable(ConsoleSystem.Arg arg)
         {
             if (!arg.CheckPermissions()) return;

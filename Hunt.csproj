@@ -7,8 +7,8 @@
     <ProjectGuid>{8581D710-BAB5-4FA6-89CD-46FA1BA86D80}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Oxide.Ext.Hunt</RootNamespace>
-    <AssemblyName>Oxide.Ext.Hunt</AssemblyName>
+    <RootNamespace>Hunt</RootNamespace>
+    <AssemblyName>Hunt</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -61,10 +61,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExtensionsCore\ExtensionInfo.cs" />
-    <Compile Include="ExtensionsCore\HuntExtension.cs" />
-    <Compile Include="ExtensionsCore\HuntPluginLoader.cs" />
-    <Compile Include="ExtensionsCore\RotatingFileLogger.cs" />
     <Compile Include="HuntPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RPG\HuntTablesGenerator.cs" />
@@ -78,6 +74,10 @@
     <Compile Include="RPG\SkillsDelegates.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

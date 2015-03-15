@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Oxide.Ext.Hunt.RPG.Keys;
+using Hunt.RPG.Keys;
 
-namespace Oxide.Ext.Hunt.RPG
+namespace Hunt.RPG
 {
     public class RPGInfo
     {
@@ -68,10 +68,10 @@ namespace Oxide.Ext.Hunt.RPG
             return true;
         }
 
-        public bool AddSkill(string skill, int points, int maxpoints)
+        public int AddSkill(string skill, int points, int maxpoints)
         {
             int pointsToAdd = Math.Abs(points);
-            if (SkillPoints < pointsToAdd) return false;
+            if (SkillPoints < pointsToAdd) return 0;
             if (Skills.ContainsKey(skill))
             {
                 int existingPoints = Skills[skill];
@@ -86,7 +86,7 @@ namespace Oxide.Ext.Hunt.RPG
                 Skills.Add(skill, pointsToAdd);
             }
             SkillPoints -= pointsToAdd;
-            return true;
+            return pointsToAdd;
         }
 
         public string SteamName { get; set; }

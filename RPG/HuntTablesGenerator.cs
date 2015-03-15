@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using Oxide.Ext.Hunt.ExtensionsCore;
-using Oxide.Ext.Hunt.RPG.Keys;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Hunt.RPG.Keys;
 
-namespace Oxide.Ext.Hunt.RPG
+namespace Hunt.RPG
 {
     public static class HuntTablesGenerator
     {
@@ -25,7 +24,7 @@ namespace Oxide.Ext.Hunt.RPG
 
         public static PluginMessagesConfig GenerateMessageTable()
         {
-            var messagesConfig = new PluginMessagesConfig(ExtensionInfo.Name, "lightblue");
+            var messagesConfig = new PluginMessagesConfig("Hunt", "lightblue");
             messagesConfig.AddMessage("help", new List<string>
             {
                 "To get an overview about the Hunt RPG, type \"/hunt about\"",
@@ -46,6 +45,8 @@ namespace Oxide.Ext.Hunt.RPG
             messagesConfig.AddMessage(HMK.InvalidCommand, "You ran the \"{0}\" command incorrectly. Type \"/hunt help\" to get help");
             messagesConfig.AddMessage(HMK.NotEnoughtPoints, "You don't have enought points to set!");
             messagesConfig.AddMessage(HMK.InvalidSkillName, "There is no such skill! Type \"/hunt skilllist\" to see the available skills");
+            messagesConfig.AddMessage(HMK.ItemNotFound, "Item {0} not found.");
+            messagesConfig.AddMessage(HMK.SkillNotLearned, "You havent learned this skill yet.");
             return messagesConfig;
         }
 
@@ -64,7 +65,29 @@ namespace Oxide.Ext.Hunt.RPG
             var hunter = new Skill(HRK.Hunter, "This skill allows you to gather resources faster from animals. Each point gives you 10% more resources per hit.", 0, 20);
             hunter.AddModifier(HRK.GatherModifier, woodAndFleshModifier);
             skillTable.Add(HRK.Hunter, hunter);
+            skillTable.Add(HRK.Researcher, new Skill(HRK.Researcher, "This skill allows you to research items you have. Each level enables a type of type to be researched. Ex: Level 1 - Tools",30, 5));
             return skillTable;
+        }
+
+        public static Dictionary<string, string> GenerateItemTable()
+        {
+            var itemsDefinition = ItemManager.GetItemDefinitions();
+            return itemsDefinition.ToDictionary(itemdef => itemdef.displayName.translated.ToLower(), itemdef => itemdef.shortname);
+        }
+
+        public static Dictionary<ItemCategory, int> GenerateResearchTable()
+        {
+            var researchTable = new Dictionary<ItemCategory, int>
+            {
+                {ItemCategory.Tool, 1},
+                {ItemCategory.Attire, 2},
+                {ItemCategory.Construction, 3},
+                {ItemCategory.Resources, 4},
+                {ItemCategory.Medical, 4},
+                {ItemCategory.Ammunition, 4},
+                {ItemCategory.Weapon, 5}
+            };
+            return researchTable;
         }
     }
 }

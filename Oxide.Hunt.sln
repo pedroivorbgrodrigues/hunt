@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Oxide.Ext.Hunt", "Oxide.Ext.Hunt.csproj", "{8581D710-BAB5-4FA6-89CD-46FA1BA86D80}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hunt", "Hunt.csproj", "{8581D710-BAB5-4FA6-89CD-46FA1BA86D80}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

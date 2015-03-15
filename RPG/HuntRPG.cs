@@ -2,19 +2,22 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
-using Oxide.Ext.Hunt.RPG.Keys;
-using LogType = Oxide.Core.Logging.LogType;
+using Hunt.RPG.Keys;
+using Oxide.Plugins;
 
-namespace Oxide.Ext.Hunt.RPG
+namespace Hunt.RPG
 {
     class HuntRPG
     {
+        private Dictionary<string, RPGInfo> RPGConfig;
         private PluginMessagesConfig MessagesTable;
         private Dictionary<string, Skill> SkillTable;
-        private Dictionary<string, RPGInfo> RPGConfig;
         private Dictionary<int, long> XPTable;
+        private Dictionary<string, string> ItemTable;
+        private Dictionary<ItemCategory, int> ResearchTable;
         private readonly HuntPlugin PluginInstance;
         readonly Random RandomGenerator = new Random();
         const float MaxCraftingTimeReducer = HK.MaxLevel * 7;
@@ -26,19 +29,20 @@ namespace Oxide.Ext.Hunt.RPG
             PluginInstance = pluginInstance;
         }
 
-        public void ConfigRPG(PluginMessagesConfig messagesTable, Dictionary<int, long> xpTable,Dictionary<string, Skill> skillTable, Dictionary<string, RPGInfo> rpgConfig)
+        public void ConfigRPG(PluginMessagesConfig messagesTable, Dictionary<int, long> xpTable, Dictionary<string, Skill> skillTable, Dictionary<string, string> itemTable, Dictionary<string, RPGInfo> rpgConfig)
         {
             MessagesTable = messagesTable;
             XPTable = xpTable;
             SkillTable = skillTable;
+            ItemTable = itemTable;
             RPGConfig = rpgConfig;
+            ResearchTable = HuntTablesGenerator.GenerateResearchTable();
         }
 
         private RPGInfo RPGInfo(BasePlayer player)
         {
             string steamId = SteamId(player);
             if (RPGConfig.ContainsKey(steamId)) return RPGConfig[steamId];
-            PluginInstance.Logger.Write(LogType.Info, "No profile for the player {0}. Creating new one.", player.displayName);
             RPGConfig[steamId] = new RPGInfo(player.displayName);
             PluginInstance.SaveRPG(RPGConfig);
             return RPGConfig[steamId];
@@ -76,13 +80,35 @@ namespace Oxide.Ext.Hunt.RPG
                 case "skillset":
                     SetSkillsCommand(player, args, rpgInfo);
                     break;
+                case "skilllist":
+                    ListSkills(player);
+                    break;
                 case "lvlup":
                     LevelUp(player, args, rpgInfo);
+                    break;
+                case "research":
+                    GiveItem(player, args, rpgInfo);
                     break;
                 default:
                     ChatMessage(player, MessagesTable.GetMessage("help"));
                     break;
             }
+        }
+
+        private void ListSkills(BasePlayer player)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("==================");
+            sb.AppendLine("Availabel Skills:");
+            foreach (var skill in SkillTable)
+            {
+                sb.AppendLine(String.Format("{0} - Required Level: {1}", skill.Key, skill.Value.RequiredLevel));
+                sb.AppendLine(String.Format("{0}", skill.Value.Description));
+                sb.AppendLine("-----------------");
+            }
+                
+            sb.AppendLine("==================");
+            ChatMessage(player, sb.ToString());
         }
 
         public bool OnAttacked(BasePlayer player, HitInfo hitInfo)
@@ -242,6 +268,54 @@ namespace Oxide.Ext.Hunt.RPG
             player.ChatMessage(string.Format("<color={0}>{1}</color>: {2}", MessagesTable.ChatPrefixColor, MessagesTable.ChatPrefix, message));
         }
 
+        public bool GiveItem(BasePlayer player, string[] args, RPGInfo rpgInfo)
+        {
+            int commandArgs = args.Length - 1;
+            if (commandArgs != 1)
+            {
+                InvalidCommand(player, args);
+                return false;
+            }
+            
+            if (!rpgInfo.Skills.ContainsKey(HRK.Researcher))
+            {
+                ChatMessage(player, MessagesTable.GetMessage(HMK.SkillNotLearned));
+                return false;
+            }
+            var playerResearchPoints = rpgInfo.Skills[HRK.Researcher];
+            var itemname = args[1];
+            itemname = itemname.ToLower();
+            if (ItemTable.ContainsKey(itemname))
+                itemname = ItemTable[itemname];
+            var definition = ItemManager.FindItemDefinition(itemname);
+            if (definition == null)
+            {
+                ChatMessage(player, MessagesTable.GetMessage(HMK.ItemNotFound, new[] { itemname }));
+                return false;
+            }
+            var playerContainer = player.inventory.containerMain;
+            var hasItem = player.inventory.AllItems().Any(item => item.info.shortname.Equals(itemname));
+            if (!hasItem)
+            {
+                ChatMessage(player, String.Format("In order to research an item you must have it on your inventory"));
+                return false;
+            }
+            if (!ResearchTable.ContainsKey(definition.category))
+            {
+                ChatMessage(player, "You can research itens of this type");
+                return false;
+            }
+            var requiredSkillPoints = ResearchTable[definition.category];
+            if (playerResearchPoints < requiredSkillPoints)
+            {
+                ChatMessage(player, String.Format("Your research skills are not hight enought. Required {0}", requiredSkillPoints));
+                return false;
+            }
+            ChatMessage(player, String.Format("You managed to reverse enginier the {0}. The blueprint its on your inventory", definition.displayName.translated));
+            player.inventory.GiveItem(ItemManager.CreateByItemID(definition.itemid, 1, true), playerContainer);
+            return true;
+        }
+
         private void SetSkillsCommand(BasePlayer player, string[] args, RPGInfo rpgInfo)
         {
             int commandArgs = args.Length - 1;
@@ -264,8 +338,9 @@ namespace Oxide.Ext.Hunt.RPG
 
                     if (SkillTable.ContainsKey(skillKey))
                     {
-                        if (rpgInfo.AddSkill(skillKey, points, SkillTable[skillKey].MaxPoints))
-                            pointsSpent.Add(String.Format("<color={0}>{1}: +{2}</color>", "purple", skillKey, points));
+                        var pointsAdded = rpgInfo.AddSkill(skillKey, points, SkillTable[skillKey].MaxPoints);
+                        if (pointsAdded!=0)
+                            pointsSpent.Add(String.Format("<color={0}>{1}: +{2}</color>", "purple", skillKey, pointsAdded));
                         else
                             pointsSpent.AddRange(MessagesTable.GetMessage(HMK.NotEnoughtPoints));
                     }
@@ -356,7 +431,6 @@ namespace Oxide.Ext.Hunt.RPG
         {
             RPGConfig.Clear();
             PluginInstance.SaveRPG(RPGConfig);
-            PluginInstance.Logger.Write(LogType.Info, "RPG data Cleared!");
         }
 
         public void SaveRPG()
@@ -389,5 +463,6 @@ namespace Oxide.Ext.Hunt.RPG
                 myFieldInfo.SetValue(player, GetMaxHealth(RPGInfo(player)));
             }
         }
+
     }
 }

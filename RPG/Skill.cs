@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Oxide.Ext.Hunt.RPG
+namespace Hunt.RPG
 {
     delegate TResult Handler<out TResult, in TParams>(TParams args);
     public class Skill

@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Hunt RPG", "PedraozauM / SW", "1.1.2", ResourceId = 841)]
+    [Info("Hunt RPG", "PedraozauM / SW", "1.1.3", ResourceId = 841)]
     public class HuntPlugin : RustPlugin
     {
         private HuntRPG HuntRPGInstance;
@@ -134,6 +134,20 @@ namespace Oxide.Plugins
         {
             HuntRPGInstance.OnGather(dispenser, entity, item);
         }
+
+        [HookMethod("OnEntityBuilt")]
+        void OnEntityBuilt(Planner planner, GameObject gameobject)
+        {
+            HuntRPGInstance.OnEntityBuilt(planner, gameobject);
+        }
+
+        [HookMethod("OnBuildingBlockUpgrade")]
+        object OnBuildingBlockUpgrade(BuildingBlock buildingBlock, BuildingGrade.Enum grade, BaseEntity.RPCMessage message)
+        {
+            HuntRPGInstance.OnBuildingBlockUpgrade(message.player, buildingBlock, grade);
+            return grade;
+        }
+
 
         [ChatCommand("h")]
         void cmdHuntShortcut(BasePlayer player, string command, string[] args)

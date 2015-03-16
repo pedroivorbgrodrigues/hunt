@@ -17,7 +17,8 @@ namespace Hunt.RPG
         private Dictionary<int, long> XPTable;
         private Dictionary<string, string> ItemTable;
         private Dictionary<ItemCategory, int> ResearchTable;
-        private Dictionary<string, Dictionary<string,float>> SkillsCooldowns;
+        private readonly Dictionary<string, Dictionary<string,float>> SkillsCooldowns;
+        private Dictionary<BuildingGrade.Enum, float> UpgradeBuildingTable;
         private SkillMethods SkillMethods;
         private readonly HuntPlugin PluginInstance;
         readonly System.Random RandomGenerator = new System.Random();
@@ -40,6 +41,7 @@ namespace Hunt.RPG
             ItemTable = itemTable;
             RPGConfig = rpgConfig;
             ResearchTable = HuntTablesGenerator.GenerateResearchTable();
+            UpgradeBuildingTable = HuntTablesGenerator.GenerateUpgradeBuildingTable();
         }
 
         private RPGInfo RPGInfo(BasePlayer player)
@@ -211,15 +213,25 @@ namespace Hunt.RPG
                     }
                     experience = item.amount * 5;
                 }
-                if (rpgInfo.AddExperience(experience, RequiredExperience(rpgInfo.Level)))
-                {
-                    ChatMessage(player, String.Format("<color=yellow>Level Up! You are now level {0}</color>", rpgInfo.Level));
-                    DisplayProfile(player);
-                    PluginInstance.SaveRPG(RPGConfig);
-                }
-                else
-                    ChatMessage(player, String.Format("<color=teal>+{0}XP</color> | {1}", experience, XPProgression(rpgInfo)));
+                ExpGain(rpgInfo, experience, player);
             }
+        }
+
+        private void ExpGain(RPGInfo rpgInfo, int experience, BasePlayer player)
+        {
+            if (rpgInfo.AddExperience(experience, RequiredExperience(rpgInfo.Level)))
+            {
+                NotifyLevelUp(player, rpgInfo);
+            }
+            else
+                ChatMessage(player, String.Format("<color=teal>+{0}XP</color> | {1}", experience, XPProgression(rpgInfo)));
+        }
+
+        private void NotifyLevelUp(BasePlayer player, RPGInfo rpgInfo)
+        {
+            ChatMessage(player, String.Format("<color=yellow>Level Up! You are now level {0}</color>", rpgInfo.Level));
+            DisplayProfile(player);
+            PluginInstance.SaveRPG(RPGConfig);
         }
 
         private long RequiredExperience(int level)
@@ -511,6 +523,20 @@ namespace Hunt.RPG
 
         public void OnEntityBuilt(Planner planner, GameObject gameobject)
         {
+            var player = planner.ownerPlayer;
+            var buildingGrade = gameobject.GetComponent<BuildingBlock>();
+            var items = buildingGrade.currentGrade.costToBuild;
+            var experience = items.Sum(item => (int) item.amount);
+            ExpGain(RPGInfo(player),experience,player);
+            
+        }
+
+        public void OnBuildingBlockUpgrade(BasePlayer player, BuildingBlock buildingBlock, BuildingGrade.Enum grade)
+        {
+            var items = buildingBlock.blockDefinition.grades[(int) grade].costToBuild;
+            int total = items.Sum(item => (int) item.amount);
+            int experience = (int) Math.Ceiling(UpgradeBuildingTable[grade]*total);
+            ExpGain(RPGInfo(player),experience,player);
         }
     }
 }

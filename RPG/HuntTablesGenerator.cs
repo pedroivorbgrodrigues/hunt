@@ -112,5 +112,16 @@ namespace Hunt.RPG
             };
             return researchTable;
         }
+
+        public static Dictionary<BuildingGrade.Enum, float> GenerateUpgradeBuildingTable()
+        {
+            var upgradeBuildingTable = new Dictionary<BuildingGrade.Enum, float>();
+            upgradeBuildingTable.Add(BuildingGrade.Enum.Twigs, 1f);
+            upgradeBuildingTable.Add(BuildingGrade.Enum.Wood, 1.5f);
+            upgradeBuildingTable.Add(BuildingGrade.Enum.Stone, 3f);
+            upgradeBuildingTable.Add(BuildingGrade.Enum.Metal, 10f);
+            upgradeBuildingTable.Add(BuildingGrade.Enum.TopTier, 3f);
+            return upgradeBuildingTable;
+        }
     }
 }

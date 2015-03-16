@@ -76,7 +76,7 @@
     <Compile Include="RPG\PluginMessagesConfig.cs" />
     <Compile Include="RPG\RPGInfo.cs" />
     <Compile Include="RPG\Skill.cs" />
-    <Compile Include="RPG\SkillsDelegates.cs" />
+    <Compile Include="RPG\SkillMethods.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -1,8 +1,9 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Hunt.RPG
 {
-    delegate TResult Handler<out TResult, in TParams>(TParams args);
     public class Skill
     {
         public Skill(string name, string description, int requiredLevel, int maxPoints)
@@ -48,4 +49,5 @@ namespace Hunt.RPG
 
         public List<object> Args { get; set; }
     }
+ 
 }

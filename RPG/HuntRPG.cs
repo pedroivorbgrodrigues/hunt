@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using Hunt.RPG.Keys;
 using Oxide.Plugins;
+using UnityEngine;
 
 namespace Hunt.RPG
 {
@@ -16,6 +17,8 @@ namespace Hunt.RPG
         private Dictionary<int, long> XPTable;
         private Dictionary<string, string> ItemTable;
         private Dictionary<ItemCategory, int> ResearchTable;
+        private Dictionary<string, Dictionary<string,float>> SkillsCooldowns;
+        private SkillMethods SkillMethods;
         private readonly HuntPlugin PluginInstance;
         readonly System.Random RandomGenerator = new System.Random();
         const float MaxCraftingTimeReducer = HK.MaxLevel * 7;
@@ -25,6 +28,8 @@ namespace Hunt.RPG
         public HuntRPG(HuntPlugin pluginInstance)
         {
             PluginInstance = pluginInstance;
+            SkillsCooldowns = new Dictionary<string, Dictionary<string, float>>();
+            SkillMethods = new SkillMethods();
         }
 
         public void ConfigRPG(PluginMessagesConfig messagesTable, Dictionary<int, long> xpTable, Dictionary<string, Skill> skillTable, Dictionary<string, string> itemTable, Dictionary<string, RPGInfo> rpgConfig)
@@ -88,7 +93,7 @@ namespace Hunt.RPG
                     LevelUp(player, args, rpgInfo);
                     break;
                 case "research":
-                    GiveItem(player, args, rpgInfo);
+                    ReserachItem(player, args, rpgInfo);
                     break;
                 default:
                     ChatMessage(player, MessagesTable.GetMessage("help"));
@@ -163,7 +168,7 @@ namespace Hunt.RPG
             var amountToReduce = (craftingTime*craftingReducer);    
             float reducedCraftingTime = craftingTime - amountToReduce;
             item.endTime = UnityEngine.Time.time + reducedCraftingTime;
-            ChatMessage(player, String.Format("Crafting reduced by {0}", amountToReduce));
+            ChatMessage(player, String.Format("Crafting reduced by {0:F}", amountToReduce));
             return item;
         }
 
@@ -181,18 +186,17 @@ namespace Hunt.RPG
                     if (rpgInfo.Skills.ContainsKey(HRK.LumberJack))
                     {
                         var modifier = SkillTable[HRK.LumberJack].Modifiers[HRK.GatherModifier];
-                        Delegate @delegate = SkillsDelegates.ModifiersDict[modifier.Identifier];
-                        int newAmount = (int) @delegate.DynamicInvoke(new[] { rpgInfo.Skills[HRK.LumberJack], modifier.Args[0],item.amount });
+                        int newAmount = SkillMethods.GatherModifier(rpgInfo.Skills[HRK.LumberJack], Convert.ToInt32(modifier.Args[0]), item.amount);
                         item.amount = newAmount;
                     }
+                    experience = item.amount;
                 }
                 if (gatherType == ResourceDispenser.GatherType.Ore)
                 {
                     if (rpgInfo.Skills.ContainsKey(HRK.Miner))
                     {
                         var modifier = SkillTable[HRK.Miner].Modifiers[HRK.GatherModifier];
-                        Delegate @delegate = SkillsDelegates.ModifiersDict[modifier.Identifier];
-                        int newAmount = (int) @delegate.DynamicInvoke(new[] { rpgInfo.Skills[HRK.Miner], modifier.Args[0], item.amount });
+                        int newAmount = SkillMethods.GatherModifier(rpgInfo.Skills[HRK.Miner], Convert.ToInt32(modifier.Args[0]), item.amount);
                         item.amount = newAmount;
                     }
                     experience = (int) ((float)item.amount/3);
@@ -202,8 +206,7 @@ namespace Hunt.RPG
                     if (rpgInfo.Skills.ContainsKey(HRK.Hunter))
                     {
                         var modifier = SkillTable[HRK.Hunter].Modifiers[HRK.GatherModifier];
-                        Delegate @delegate = SkillsDelegates.ModifiersDict[modifier.Identifier];
-                        int newAmount = (int) @delegate.DynamicInvoke(new[] { rpgInfo.Skills[HRK.Hunter], modifier.Args[0], item.amount });
+                        int newAmount = SkillMethods.GatherModifier(rpgInfo.Skills[HRK.Hunter], Convert.ToInt32(modifier.Args[0]), item.amount);
                         item.amount = newAmount;
                     }
                     experience = item.amount * 5;
@@ -269,7 +272,7 @@ namespace Hunt.RPG
             player.ChatMessage(string.Format("<color={0}>{1}</color>: {2}", MessagesTable.ChatPrefixColor, MessagesTable.ChatPrefix, message));
         }
 
-        public bool GiveItem(BasePlayer player, string[] args, RPGInfo rpgInfo)
+        public bool ReserachItem(BasePlayer player, string[] args, RPGInfo rpgInfo)
         {
             int commandArgs = args.Length - 1;
             if (commandArgs != 1)
@@ -312,8 +315,49 @@ namespace Hunt.RPG
                 ChatMessage(player, String.Format("Your research skills are not hight enought. Required {0}", requiredSkillPoints));
                 return false;
             }
-            ChatMessage(player, String.Format("You managed to reverse enginier the {0}. The blueprint its on your inventory", definition.displayName.translated));
-            player.inventory.GiveItem(ItemManager.CreateByItemID(definition.itemid, 1, true), playerContainer);
+
+            var steamId = SteamId(player);
+            if (!SkillsCooldowns.ContainsKey(steamId))
+                SkillsCooldowns.Add(steamId, new Dictionary<string, float>());
+            Dictionary<string, float> playerCooldowns = SkillsCooldowns[steamId];
+            float availableAt = 0;
+            var time = UnityEngine.Time.time;
+            bool isReady = false;
+            if (playerCooldowns.ContainsKey(HRK.Researcher))
+            {
+                availableAt = playerCooldowns[HRK.Researcher];
+                isReady = time >= availableAt;
+            }
+            else
+            {
+                isReady = true;
+                playerCooldowns.Add(HRK.Researcher, availableAt);
+            }
+            if (isReady)
+            {
+                var random = Random(0, 1);
+                if (random > 0.6)
+                {
+                    ChatMessage(player, String.Format("You managed to reverse enginier the {0}. The blueprint its on your inventory", definition.displayName.translated));
+                    player.inventory.GiveItem(ItemManager.CreateByItemID(definition.itemid, 1, true), playerContainer);
+                }
+                else
+                {
+                    ChatMessage(player, String.Format("OPS! While you were trying to research the {0} you accidently broke it.", definition.displayName.translated));
+                    var itemInstance = player.inventory.FindItemID(definition.itemid);
+                    player.inventory.Take(new List<Item> { itemInstance }, definition.itemid, 1);
+                }
+                var modifier = SkillTable[HRK.Researcher].Modifiers[HRK.CooldownModifier];
+                
+                availableAt = SkillMethods.CooldownModifier(rpgInfo.Skills[HRK.Researcher], Convert.ToInt32(modifier.Args[0]), Convert.ToInt32(modifier.Args[1]), time);
+                playerCooldowns[HRK.Researcher] = availableAt;
+            }
+            else
+            {
+                var timeLeft = availableAt - time;
+                var formatableTime = new DateTime(TimeSpan.FromSeconds(timeLeft).Ticks);
+                ChatMessage(player, String.Format("You have tried this moments ago, give it a rest. Time left to research again: {0:mm\\:ss}",formatableTime));
+            }
             return true;
         }
 
@@ -465,5 +509,8 @@ namespace Hunt.RPG
             }
         }
 
+        public void OnEntityBuilt(Planner planner, GameObject gameobject)
+        {
+        }
     }
 }

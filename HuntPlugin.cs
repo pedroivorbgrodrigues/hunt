@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Hunt RPG", "PedraozauM / SW", "1.0.0", ResourceId = 0)]
+    [Info("Hunt RPG", "PedraozauM / SW", "1.1.2", ResourceId = 841)]
     public class HuntPlugin : RustPlugin
     {
         private HuntRPG HuntRPGInstance;
@@ -185,12 +185,6 @@ namespace Oxide.Plugins
 
         [HookMethod("OnServerSave")]
         void OnServerSave()
-        {
-            HuntRPGInstance.SaveRPG();
-        }
-
-        [HookMethod("OnServerQuit")]
-        void OnServerQuit()
         {
             HuntRPGInstance.SaveRPG();
         }

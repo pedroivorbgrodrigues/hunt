@@ -51,24 +51,24 @@ namespace Hunt.RPG
             return messagesConfig;
         }
 
-        private static string HuntAbout()
+        private static List<string> HuntAbout()
         {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("===============================================================");
-            sb.AppendLine("The Hunt RPG system in development.");
-            sb.AppendLine("It is consisted of levels, stats atributes, skills and later on specializations.");
-            sb.AppendLine("Currently there are 3 attributes, each of then give you and specific enhancement.");
-            sb.AppendLine("Strenght gives you more health, it will not be displayed in the Health Bar, but it is considered for healing and getting hurt.");
-            sb.AppendLine("Agillity gives you dodge change");
-            sb.AppendLine("Intelligence decreases your items crafting time");
-            sb.AppendLine("Right now you can level up by gathering resources.");
-            sb.AppendLine("Each level gives you 1 point in each attribute. And 3 more to distribute.");
-            sb.AppendLine("Each level gives you 1 skill point to distribute");
-            sb.AppendLine("Each skill have its required level, and later on it will require specific stats.");
-            sb.AppendLine("To see the all the available skills and its description type \"/hunt skilllist\"");
-            sb.AppendLine("To learn more about Hunt RPG go to the plugin page at <link>");
-            sb.AppendLine("===============================================================");
-            return sb.ToString();
+            var aboutMessages = new List<string>();
+            aboutMessages.Add("=================================================");
+            aboutMessages.Add("The Hunt RPG system in development.");
+            aboutMessages.Add("It is consisted of levels, stats atributes, skills and later on specializations.");
+            aboutMessages.Add("Currently there are 3 attributes, each of then give you and specific enhancement.");
+            aboutMessages.Add("Strenght gives you more health, it will not be displayed in the Health Bar, but it is considered for healing and getting hurt.");
+            aboutMessages.Add("Agillity gives you dodge change");
+            aboutMessages.Add("Intelligence decreases your items crafting time");
+            aboutMessages.Add("Right now you can level up by gathering resources.");
+            aboutMessages.Add("Each level gives you 1 point in each attribute. And 3 more to distribute.");
+            aboutMessages.Add("Each level gives you 1 skill point to distribute");
+            aboutMessages.Add("Each skill have its required level, and later on it will require specific stats.");
+            aboutMessages.Add("To see the all the available skills and its description type \"/hunt skilllist\"");
+            aboutMessages.Add("To learn more about Hunt RPG go to the plugin page at <link>");
+            aboutMessages.Add("=================================================");
+            return aboutMessages;
         }
 
 
@@ -86,7 +86,9 @@ namespace Hunt.RPG
             hunter.AddModifier(HRK.GatherModifier, woodAndFleshModifier);
             skillTable.Add(HRK.Hunter, hunter);
             var description = "This skill allows you to research items you have. Each level enables a type of type to be researched. Table: Level 1 - Tools; Level 2 - Clothes; Level 3 - Construction and Resources; Level 4 - Ammunition and Medic; Level 5 - Weapons";
-            skillTable.Add(HRK.Researcher, new Skill(HRK.Researcher, description,30, 5));
+            var researcher = new Skill(HRK.Researcher, description,30, 5);
+            researcher.AddModifier(HRK.CooldownModifier, new Modifier(HRK.CooldownModifier, new List<object>() {10,2}));
+            skillTable.Add(HRK.Researcher, researcher);
             return skillTable;
         }
 

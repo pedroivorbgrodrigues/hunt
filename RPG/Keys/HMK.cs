@@ -2,6 +2,11 @@
 {
     static class HMK
     {
+        public const string SkillInfo = "skill_info";
+        public const string NotEnoughIntelligence = "not_enought_int";
+        public const string NotEnoughAgility = "not_enought_agi";
+        public const string NotEnoughStrength = "not_enought_str";
+        public const string NotEnoughLevels = "not_enought_levels";
         public const string About = "hunt_about";
         public const string SkillNotLearned = "skill_not_learner";
         public const string ItemNotFound = "item_not_found";

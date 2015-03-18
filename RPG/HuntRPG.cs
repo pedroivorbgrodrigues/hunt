@@ -17,9 +17,10 @@ namespace Hunt.RPG
         private Dictionary<int, long> XPTable;
         private Dictionary<string, string> ItemTable;
         private Dictionary<ItemCategory, int> ResearchTable;
+        private Dictionary<string, string> PlayersFurnaces;
+        private Dictionary<string, float> PlayerLastPercentChange;
         private readonly Dictionary<string, Dictionary<string,float>> SkillsCooldowns;
         private Dictionary<BuildingGrade.Enum, float> UpgradeBuildingTable;
-        private SkillMethods SkillMethods;
         private readonly HuntPlugin PluginInstance;
         readonly System.Random RandomGenerator = new System.Random();
         const float MaxCraftingTimeReducer = HK.MaxLevel * 7;
@@ -30,10 +31,10 @@ namespace Hunt.RPG
         {
             PluginInstance = pluginInstance;
             SkillsCooldowns = new Dictionary<string, Dictionary<string, float>>();
-            SkillMethods = new SkillMethods();
+            PlayerLastPercentChange = new Dictionary<string, float>();
         }
 
-        public void ConfigRPG(PluginMessagesConfig messagesTable, Dictionary<int, long> xpTable, Dictionary<string, Skill> skillTable, Dictionary<string, string> itemTable, Dictionary<string, RPGInfo> rpgConfig)
+        public void ConfigRPG(PluginMessagesConfig messagesTable, Dictionary<int, long> xpTable, Dictionary<string, Skill> skillTable, Dictionary<string, string> itemTable, Dictionary<string, RPGInfo> rpgConfig, Dictionary<string, string> playerFurnaces)
         {
             MessagesTable = messagesTable;
             XPTable = xpTable;
@@ -42,6 +43,7 @@ namespace Hunt.RPG
             RPGConfig = rpgConfig;
             ResearchTable = HuntTablesGenerator.GenerateResearchTable();
             UpgradeBuildingTable = HuntTablesGenerator.GenerateUpgradeBuildingTable();
+            PlayersFurnaces = playerFurnaces;
         }
 
         private RPGInfo RPGInfo(BasePlayer player)
@@ -49,7 +51,7 @@ namespace Hunt.RPG
             string steamId = SteamId(player);
             if (RPGConfig.ContainsKey(steamId)) return RPGConfig[steamId];
             RPGConfig[steamId] = new RPGInfo(player.displayName);
-            PluginInstance.SaveRPG(RPGConfig);
+            PluginInstance.SaveRPG(RPGConfig, PlayersFurnaces);
             return RPGConfig[steamId];
         }
 
@@ -88,6 +90,9 @@ namespace Hunt.RPG
                 case "skillset":
                     SetSkillsCommand(player, args, rpgInfo);
                     break;
+                case "skill":
+                    DisplaySkillCommand(player, args);
+                    break;
                 case "skilllist":
                     ListSkills(player);
                     break;
@@ -97,10 +102,53 @@ namespace Hunt.RPG
                 case "research":
                     ReserachItem(player, args, rpgInfo);
                     break;
+                case "xp":
+                    ChatMessage(player, XPProgression(rpgInfo));
+                    break;
+                case "xp%":
+                    ChangePlayerXPMessagePreference(player, args, rpgInfo);
+                    break;
                 default:
                     ChatMessage(player, MessagesTable.GetMessage("help"));
                     break;
             }
+        }
+
+        private void ChangePlayerXPMessagePreference(BasePlayer player, string[] args, RPGInfo rpgInfo)
+        {
+            int commandArgs = args.Length - 1;
+            if (commandArgs != 1)
+            {
+                InvalidCommand(player, args);
+                return;
+            }
+            float xpPercent = 1f;
+            if (!Single.TryParse(args[1], out xpPercent))
+            {
+                InvalidCommand(player, args);
+                return;
+            }
+            rpgInfo.ShowXPMessagePercent = (float)(xpPercent/100);
+            ChatMessage(player, String.Format("XP will be shown at every {0:P} change", rpgInfo.ShowXPMessagePercent));
+        }
+
+        private void DisplaySkillCommand(BasePlayer player, string[] args)
+        {
+            int commandArgs = args.Length - 1;
+            if (commandArgs != 1)
+            {
+                InvalidCommand(player, args);
+                return;
+            }
+            var skillName = args[1];
+            if (!SkillTable.ContainsKey(skillName))
+            {
+                ChatMessage(player, HMK.InvalidSkillName);
+                return;
+            }
+            var sb = new StringBuilder();
+            SkillInfo(sb, SkillTable[skillName]);
+            ChatMessage(player, sb.ToString());
         }
 
         private void ListSkills(BasePlayer player)
@@ -109,14 +157,29 @@ namespace Hunt.RPG
             sb.AppendLine("==================");
             sb.AppendLine("Availabel Skills:");
             foreach (var skill in SkillTable)
-            {
-                sb.AppendLine(String.Format("{0} - Required Level: {1}", skill.Key, skill.Value.RequiredLevel));
-                sb.AppendLine(String.Format("{0}", skill.Value.Description));
-                sb.AppendLine("-----------------");
-            }
-                
+                SkillInfo(sb, skill.Value);
             sb.AppendLine("==================");
             ChatMessage(player, sb.ToString());
+        }
+
+        private void SkillInfo(StringBuilder sb, Skill skill)
+        {
+            sb.AppendLine(String.Format("{0} - Required Level: {1}", skill.Name, skill.RequiredLevel));
+            if (skill.SkillpointsPerLevel > 1)
+                sb.AppendLine(String.Format("Each skill level costs {0} skillpoints",
+                    skill.SkillpointsPerLevel));
+
+            if (skill.RequiredStats.Count > 0)
+            {
+                StringBuilder sbs = new StringBuilder();
+                foreach (var requiredStat in skill.RequiredStats)
+                {
+                    sbs.Append(String.Format("{0}: {1} |", requiredStat.Key, requiredStat.Value));
+                }
+                sb.AppendLine(String.Format("Required stats: {0}", sbs));
+            }
+            sb.AppendLine(String.Format("{0}", skill.Description));
+            sb.AppendLine("-----------------");
         }
 
         public bool OnAttacked(BasePlayer player, HitInfo hitInfo)
@@ -128,11 +191,9 @@ namespace Hunt.RPG
             {
                 var randomFloat = Random(0, 1);
                 RPGInfo rpgInfo = RPGInfo(player);
-                CurrentHealth(rpgInfo, player);
                 var evasion = GetEvasion(rpgInfo);
                 bool evaded = randomFloat <= evasion;
-                if (evaded)
-                    ChatMessage(player, "Dodged!");
+                ChatMessage(player, evaded ? "Dodged!" : CurrentHealth(rpgInfo, player));
                 return evaded;
             }
             return false;
@@ -169,8 +230,8 @@ namespace Hunt.RPG
             float craftingReducer = GetCraftingReducer(rpgInfo);
             var amountToReduce = (craftingTime*craftingReducer);    
             float reducedCraftingTime = craftingTime - amountToReduce;
-            item.endTime = UnityEngine.Time.time + reducedCraftingTime;
-            ChatMessage(player, String.Format("Crafting reduced by {0:F}", amountToReduce));
+            item.endTime = Time.time + reducedCraftingTime;
+            ChatMessage(player, String.Format("Crafting will end in {0:F} seconds. Reduced in {1:F} seconds", reducedCraftingTime, amountToReduce));
             return item;
         }
 
@@ -219,19 +280,32 @@ namespace Hunt.RPG
 
         private void ExpGain(RPGInfo rpgInfo, int experience, BasePlayer player)
         {
+            var steamId = SteamId(player);
             if (rpgInfo.AddExperience(experience, RequiredExperience(rpgInfo.Level)))
             {
                 NotifyLevelUp(player, rpgInfo);
+                PlayerLastPercentChange[steamId] = 0;
             }
             else
-                ChatMessage(player, String.Format("<color=teal>+{0}XP</color> | {1}", experience, XPProgression(rpgInfo)));
+            {
+                var currentPercent = CurrentPercent(rpgInfo);
+                if (!PlayerLastPercentChange.ContainsKey(steamId))
+                    PlayerLastPercentChange.Add(steamId, currentPercent);
+                var lastPercent = PlayerLastPercentChange[steamId];
+                var requiredPercentChange = rpgInfo.ShowXPMessagePercent;
+                float percentChange = currentPercent - lastPercent;
+                if (percentChange < requiredPercentChange) return;
+                ChatMessage(player, XPProgression(rpgInfo));
+                PlayerLastPercentChange[steamId] = currentPercent;
+            }
+                
         }
 
         private void NotifyLevelUp(BasePlayer player, RPGInfo rpgInfo)
         {
             ChatMessage(player, String.Format("<color=yellow>Level Up! You are now level {0}</color>", rpgInfo.Level));
             DisplayProfile(player);
-            PluginInstance.SaveRPG(RPGConfig);
+            PluginInstance.SaveRPG(RPGConfig, PlayersFurnaces);
         }
 
         private long RequiredExperience(int level)
@@ -241,8 +315,13 @@ namespace Hunt.RPG
 
         public string XPProgression(RPGInfo rpgInfo)
         {
-            float percent = (float)((float)(rpgInfo.Experience)/(float)(RequiredExperience(rpgInfo.Level)));
-            return String.Format("XP: {0:P}", percent);
+            var percent = CurrentPercent(rpgInfo);
+            return String.Format("Current XP: {0:P}", percent);
+        }
+
+        private float CurrentPercent(RPGInfo rpgInfo)
+        {
+            return (float) ((float) (rpgInfo.Experience)/(float) (RequiredExperience(rpgInfo.Level)));
         }
 
         public string Profile(RPGInfo rpgInfo, BasePlayer player)
@@ -270,7 +349,7 @@ namespace Hunt.RPG
 
         private string CurrentHealth(RPGInfo rpgInfo, BasePlayer player)
         {
-            return String.Format("Health: {0}/{1}", player.Health(), GetMaxHealth(rpgInfo));
+            return String.Format("Health: {0:F1}/{1:F}", player.health, GetMaxHealth(rpgInfo));
         }
 
         private void ChatMessage(BasePlayer player, IEnumerable<string> messages)
@@ -333,7 +412,7 @@ namespace Hunt.RPG
                 SkillsCooldowns.Add(steamId, new Dictionary<string, float>());
             Dictionary<string, float> playerCooldowns = SkillsCooldowns[steamId];
             float availableAt = 0;
-            var time = UnityEngine.Time.time;
+            var time = Time.realtimeSinceStartup;
             bool isReady = false;
             if (playerCooldowns.ContainsKey(HRK.Researcher))
             {
@@ -352,6 +431,7 @@ namespace Hunt.RPG
                 {
                     ChatMessage(player, String.Format("You managed to reverse enginier the {0}. The blueprint its on your inventory", definition.displayName.translated));
                     player.inventory.GiveItem(ItemManager.CreateByItemID(definition.itemid, 1, true), playerContainer);
+                    NoticeArea.ItemPickUp(definition,1, true);
                 }
                 else
                 {
@@ -376,36 +456,43 @@ namespace Hunt.RPG
         private void SetSkillsCommand(BasePlayer player, string[] args, RPGInfo rpgInfo)
         {
             int commandArgs = args.Length - 1;
-            if (args.Length < 3 || (commandArgs % 2) != 0)
-                InvalidCommand(player, args);
-            else
+            if (args.Length < 3 || (commandArgs%2) != 0)
             {
-                var pointsSpent = new List<string>();
-                int pairs = (commandArgs / 2) + 1;
-                for (int i = 1; i < pairs; i++)
-                {
-                    int index = i * 2 - 1;
-                    string skillKey = args[index];
-                    int points;
-                    if (!Int32.TryParse(args[index + 1], out points))
-                    {
-                        InvalidCommand(player, args);
-                        continue;
-                    }
-
-                    if (SkillTable.ContainsKey(skillKey))
-                    {
-                        var pointsAdded = rpgInfo.AddSkill(skillKey, points, SkillTable[skillKey].MaxPoints);
-                        if (pointsAdded!=0)
-                            pointsSpent.Add(String.Format("<color={0}>{1}: +{2}</color>", "purple", skillKey, pointsAdded));
-                        else
-                            pointsSpent.AddRange(MessagesTable.GetMessage(HMK.NotEnoughtPoints));
-                    }
-                    else
-                        pointsSpent.AddRange(MessagesTable.GetMessage(HMK.InvalidSkillName));
-                }
-                ChatMessage(player, pointsSpent);
+                InvalidCommand(player, args);
+                return;
             }
+            var pointsSpent = new List<string>();
+            int pairs = (commandArgs / 2) + 1;
+            for (int i = 1; i < pairs; i++)
+            {
+                int index = i * 2 - 1;
+                string skillKey = args[index];
+                int points;
+                if (!Int32.TryParse(args[index + 1], out points))
+                {
+                    InvalidCommand(player, args);
+                    continue;
+                }
+
+                if (SkillTable.ContainsKey(skillKey))
+                {
+                    var skill = SkillTable[skillKey];
+                    string reason = "";
+                    var pointsAdded = rpgInfo.AddSkill(skill, points, out reason);
+                    if (pointsAdded != 0)
+                        pointsSpent.Add(String.Format("<color={0}>{1}: +{2}</color>", "purple", skillKey,
+                            pointsAdded));
+                    else
+                    {
+                        pointsSpent.AddRange(MessagesTable.GetMessage(reason));
+                        pointsSpent.AddRange(MessagesTable.GetMessage(HMK.SkillInfo));
+                    }
+                            
+                }
+                else
+                    pointsSpent.AddRange(MessagesTable.GetMessage(HMK.InvalidSkillName));
+            }
+            ChatMessage(player, pointsSpent);
         }
 
         private void SetStatsCommand(BasePlayer player, string[] args, RPGInfo rpgInfo)
@@ -487,12 +574,13 @@ namespace Hunt.RPG
         public void ResetRPG()
         {
             RPGConfig.Clear();
-            PluginInstance.SaveRPG(RPGConfig);
+            PlayersFurnaces.Clear();
+            PluginInstance.SaveRPG(RPGConfig, PlayersFurnaces);
         }
 
         public void SaveRPG()
         {
-            PluginInstance.SaveRPG(RPGConfig);
+            PluginInstance.SaveRPG(RPGConfig, PlayersFurnaces);
         }
 
         public void DisplayProfile(BasePlayer player)
@@ -503,32 +591,23 @@ namespace Hunt.RPG
         public void OnDeath(BasePlayer player)
         {
             RPGInfo(player).Died();
+            ChatMessage(player, String.Format("Oh no man! You just died! You lost {0:P} of XP because of this....", HK.DeathReducer));
         }
 
-        public void InitPlayer(BasePlayer player)
+        public void PlayerInit(BasePlayer player)
         {
             SetMaxHealth(player);
             DisplayProfile(player);
+            var steamId = SteamId(player);
+            if(!PlayerLastPercentChange.ContainsKey(steamId))
+                PlayerLastPercentChange.Add(steamId, CurrentPercent(RPGInfo(player)));
         }
 
         private void SetMaxHealth(BasePlayer player)
         {
             var typeOf = typeof (BaseCombatEntity);
             var myFieldInfo = typeOf.GetField("_maxHealth", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (myFieldInfo != null)
-            {
-                myFieldInfo.SetValue(player, GetMaxHealth(RPGInfo(player)));
-            }
-        }
-
-        public void OnEntityBuilt(Planner planner, GameObject gameobject)
-        {
-            var player = planner.ownerPlayer;
-            var buildingGrade = gameobject.GetComponent<BuildingBlock>();
-            var items = buildingGrade.currentGrade.costToBuild;
-            var experience = items.Sum(item => (int) item.amount);
-            ExpGain(RPGInfo(player),experience,player);
-            
+            myFieldInfo?.SetValue(player, GetMaxHealth(RPGInfo(player)));
         }
 
         public void OnBuildingBlockUpgrade(BasePlayer player, BuildingBlock buildingBlock, BuildingGrade.Enum grade)
@@ -536,7 +615,52 @@ namespace Hunt.RPG
             var items = buildingBlock.blockDefinition.grades[(int) grade].costToBuild;
             int total = items.Sum(item => (int) item.amount);
             int experience = (int) Math.Ceiling(UpgradeBuildingTable[grade]*total);
-            ExpGain(RPGInfo(player),experience,player);
+            ExpGain(RPGInfo(player), experience, player);
+        }
+
+        public void OnDeployItem(Deployer deployer, BaseEntity baseEntity)
+        {
+            var player = deployer.ownerPlayer;
+            var item = deployer.GetItem();
+            var itemDef = item.info;
+            var type = baseEntity.GetType();
+            if (type != typeof (BaseOven) || !itemDef.displayName.translated.ToLower().Equals("furnace")) return;
+            var baseOven = (BaseOven)baseEntity;
+            var instanceId = OvenId(baseOven);
+            if (PlayersFurnaces.ContainsKey(instanceId))
+            {
+                ChatMessage(player, "Contact the developer, tell him wrong Id usage for furnace.");
+                return;
+            }
+            PlayersFurnaces.Add(instanceId, SteamId(player));
+        }
+
+        private string OvenId(BaseOven oven)
+        {
+            var position = oven.transform.position;
+            return String.Format("X{0}Y{1}Z{2}", position.x, position.y, position.z);
+        }
+
+        public void OnConsumeFuel(BaseOven oven, Item fuel, ItemModBurnable burnable)
+        {
+            var instanceId = OvenId(oven);
+            if (!PlayersFurnaces.ContainsKey(instanceId))
+                return;
+            var player = BasePlayer.FindByID(Convert.ToUInt64(PlayersFurnaces[instanceId]));
+            var rpgInfo = RPGInfo(player);
+            if (!rpgInfo.Skills.ContainsKey(HRK.Blacksmith))
+                return;
+            var amountToGive = rpgInfo.Skills[HRK.Blacksmith];
+            var itemList = oven.inventory.itemList;
+            var itensCanMelt = (from item in itemList let itemModCookable = item.info.GetComponent<ItemModCookable>() where itemModCookable != null select item).ToList();
+            foreach (var item in itensCanMelt)
+            {
+                var itemModCookable = item.info.GetComponent<ItemModCookable>();
+                oven.inventory.Take(null, item.info.itemid, amountToGive);
+                var itemToGive = ItemManager.Create(itemModCookable.becomeOnCooked, amountToGive, false);
+                if (!itemToGive.MoveToContainer(oven.inventory, -1, true))
+                    itemToGive.Drop(oven.inventory.dropPosition, oven.inventory.dropVelocity);
+            }
         }
     }
 }

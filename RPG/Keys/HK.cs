@@ -3,6 +3,8 @@
     static class HK
     {
         public const string DataFileName = "Hunt_Data";
+        public const string Profile = "PROFILE";
+        public const string Furnaces = "FURNACES";
         public const string MessagesTable = "MESSAGESTABLE";
         public const string XPTable = "XPTABLE";
         public const string SkillTable = "SKILLTABLE";

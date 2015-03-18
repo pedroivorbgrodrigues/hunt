@@ -11,6 +11,7 @@ namespace Hunt.RPG
             SteamName = steamName;
             Level = 0;
             Skills = new Dictionary<string, int>();
+            ShowXPMessagePercent = 0.01f;
         }
 
         public bool AddExperience(long xp,long requiredXp)
@@ -68,25 +69,63 @@ namespace Hunt.RPG
             return true;
         }
 
-        public int AddSkill(string skill, int points, int maxpoints)
+        public int AddSkill(Skill skill, int points, out string reason)
         {
             int pointsToAdd = Math.Abs(points);
-            if (SkillPoints < pointsToAdd) return 0;
-            if (Skills.ContainsKey(skill))
+            var requiredPoints = pointsToAdd * skill.SkillpointsPerLevel;
+            if (SkillPoints < requiredPoints)
             {
-                int existingPoints = Skills[skill];
-                if (existingPoints + points > maxpoints)
-                    pointsToAdd = maxpoints - existingPoints;
-                Skills[skill] += pointsToAdd;
+                reason = HMK.NotEnoughtPoints;
+                return 0;
+            }
+            if (Level < skill.RequiredLevel)
+            {
+                reason = HMK.NotEnoughLevels;
+                return 0;
+            }
+            foreach (var requiredStat in skill.RequiredStats)
+            {
+                switch (requiredStat.Key.ToLower())
+                {
+                    case "str":
+                        if (Strength < requiredStat.Value)
+                        {
+                            reason = HMK.NotEnoughStrength;
+                            return 0;
+                        }
+                    break;
+                    case "agi":
+                        if (Agility < requiredStat.Value)
+                        {
+                            reason = HMK.NotEnoughAgility;
+                            return 0;
+                        }
+                    break;
+                    case "int":
+                        if (Intelligence < requiredStat.Value)
+                        {
+                            reason = HMK.NotEnoughIntelligence;
+                            return 0;
+                        }
+                        break;
+                }
+            }
+            if (Skills.ContainsKey(skill.Name))
+            {
+                int existingPoints = Skills[skill.Name];
+                if (existingPoints + points > skill.MaxPoints)
+                    pointsToAdd = skill.MaxPoints - existingPoints;
+                Skills[skill.Name] += pointsToAdd;
             }
             else
             {
-                if (points > maxpoints)
-                    pointsToAdd = maxpoints;
-                Skills.Add(skill, pointsToAdd);
+                if (points > skill.MaxPoints)
+                    pointsToAdd = skill.MaxPoints;
+                Skills.Add(skill.Name, pointsToAdd);
             }
-            SkillPoints -= pointsToAdd;
-            return pointsToAdd;
+            SkillPoints -= requiredPoints;
+            reason = "";
+            return points;
         }
 
         public string SteamName { get; set; }
@@ -98,6 +137,8 @@ namespace Hunt.RPG
         public int StatsPoints { get; set; }
         public int SkillPoints { get; set; }
         public Dictionary<string,int> Skills { get; set; }
+
+        public float ShowXPMessagePercent { get; set; }
 
     }
 }

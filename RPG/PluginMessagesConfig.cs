@@ -18,12 +18,18 @@ namespace Hunt.RPG
 
         public void AddMessage(string key, string message)
         {
-            Messages.Add(key, new List<string> {message});
+            if (Messages.ContainsKey(key))
+                Messages[key].Add(message);
+            else
+                Messages.Add(key, new List<string> {message});
         }
 
         public void AddMessage(string key, List<string> message)
         {
-            Messages.Add(key, message);
+            if (Messages.ContainsKey(key))
+                Messages[key].AddRange(message);
+            else
+                Messages.Add(key, message);
         }
 
         public List<string> GetMessage(string key, string[] args = null)

@@ -14,6 +14,14 @@ namespace Hunt.RPG
             MaxPoints = maxPoints;
             RequiredSkills = new Dictionary<string, int>();
             Modifiers = new Dictionary<string, Modifier>();
+            RequiredStats = new Dictionary<string, int>();
+            SkillpointsPerLevel = 1;
+        }
+
+        public void AddRequiredStat(string stat, int points)
+        {
+            if(!RequiredStats.ContainsKey(stat))
+                RequiredStats.Add(stat, points);
         }
 
         public void AddRequiredSkill(string skillName, int pointsNeeded)
@@ -34,7 +42,9 @@ namespace Hunt.RPG
 
         public int MaxPoints { get; set; }
         public Dictionary<string,int> RequiredSkills { get; set; }
-        public Dictionary<string, Modifier> Modifiers { get; set; }
+        public Dictionary<string, Modifier> Modifiers { get; set;}
+        public Dictionary<string,int> RequiredStats { get; set; }
+        public int SkillpointsPerLevel { get; set; }
     }
 
     public class Modifier

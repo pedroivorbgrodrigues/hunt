@@ -1,19 +1,22 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using Hunt.RPG;
 using Hunt.RPG.Keys;
 using Newtonsoft.Json;
 using Oxide.Core;
+using Oxide.Core.Configuration;
 using Oxide.Core.Plugins;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Hunt RPG", "PedraozauM / SW", "1.1.3", ResourceId = 841)]
+    [Info("Hunt RPG", "PedraozauM / SW", "1.2.0", ResourceId = 841)]
     public class HuntPlugin : RustPlugin
     {
         private HuntRPG HuntRPGInstance;
         private bool ServerInitialized;
         private bool GenerateNewConfig;
+        private DynamicConfigFile HuntDataFile;
 
         public HuntPlugin()
         {
@@ -39,6 +42,10 @@ namespace Oxide.Plugins
                 if (!GenerateNewConfig) return;
                 Puts("Item Table generated");
                 Config[HK.ItemTable] = HuntTablesGenerator.GenerateItemTable();
+                HuntDataFile = Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
+                HuntDataFile[HK.Profile] = new Dictionary<string, RPGInfo>();
+                HuntDataFile[HK.Furnaces] = new Dictionary<string, string>();
+                Interface.GetMod().DataFileSystem.SaveDatafile(HK.DataFileName);
                 SaveConfig();
             }
                 
@@ -47,14 +54,16 @@ namespace Oxide.Plugins
         private void LoadRPG()
         {
             LoadConfig();
-            Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
-            var rpgConfig = Interface.GetMod().DataFileSystem.ReadObject<Dictionary<string, RPGInfo>>(HK.DataFileName);
+            HuntDataFile = Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
+            var rpgConfig = ReadFromData<Dictionary<string, RPGInfo>>(HK.Profile);
             Puts("{0} profiles loaded", rpgConfig.Count.ToString());
+            var playerFurnaces = ReadFromData<Dictionary<string, string>>(HK.Furnaces);
+            Puts("{0} furnaces loaded", rpgConfig.Count.ToString());
             var xpTable = ReadFromConfig<Dictionary<int, long>>(HK.XPTable);
             var messagesTable = ReadFromConfig<PluginMessagesConfig>(HK.MessagesTable);
             var skillTable = ReadFromConfig<Dictionary<string, Skill>>(HK.SkillTable);
             var itemTable = ReadFromConfig<Dictionary<string, string>>(HK.ItemTable);
-            HuntRPGInstance.ConfigRPG(messagesTable, xpTable, skillTable, itemTable, rpgConfig);
+            HuntRPGInstance.ConfigRPG(messagesTable, xpTable, skillTable, itemTable, rpgConfig, playerFurnaces);
         }
 
         public T ReadFromConfig<T>(string configKey)
@@ -63,10 +72,20 @@ namespace Oxide.Plugins
             return JsonConvert.DeserializeObject<T>(serializeObject);
         }
 
-        public void SaveRPG(Dictionary<string, RPGInfo> rpgConfig)
+        public T ReadFromData<T>(string dataKey)
         {
-            Interface.GetMod().DataFileSystem.WriteObject(HK.DataFileName, rpgConfig);
+            string serializeObject = JsonConvert.SerializeObject(HuntDataFile[dataKey]);
+            return JsonConvert.DeserializeObject<T>(serializeObject);
+        }
+
+        public void SaveRPG(Dictionary<string, RPGInfo> rpgConfig, Dictionary<string, string> playersFurnaces)
+        {
+            HuntDataFile[HK.Profile] = rpgConfig;
+            HuntDataFile[HK.Furnaces] = playersFurnaces;
             Puts("{0} profiles saved", rpgConfig.Count.ToString());
+            Puts("{0} furnaces saved", playersFurnaces.Count.ToString());
+            Interface.GetMod().DataFileSystem.SaveDatafile(HK.DataFileName);
+
         }
 
         [HookMethod("Init")]
@@ -101,7 +120,7 @@ namespace Oxide.Plugins
         [HookMethod("OnPlayerInit")]
         void OnPlayerInit(BasePlayer player)
         {
-            HuntRPGInstance.InitPlayer(player);
+            HuntRPGInstance.PlayerInit(player);
         }
 
         [HookMethod("OnEntityAttacked")]
@@ -113,7 +132,6 @@ namespace Oxide.Plugins
             hitInfo = new HitInfo();
             return hitInfo;
         }
-
 
         [HookMethod("OnEntityDeath")]
         void OnEntityDeath(MonoBehaviour entity, HitInfo hitinfo)
@@ -135,10 +153,16 @@ namespace Oxide.Plugins
             HuntRPGInstance.OnGather(dispenser, entity, item);
         }
 
-        [HookMethod("OnEntityBuilt")]
-        void OnEntityBuilt(Planner planner, GameObject gameobject)
+        [HookMethod("OnItemDeployed")]
+        void OnItemDeployed(Deployer deployer, BaseEntity baseEntity)
         {
-            HuntRPGInstance.OnEntityBuilt(planner, gameobject);
+            HuntRPGInstance.OnDeployItem(deployer, baseEntity);
+        }
+
+        [HookMethod("OnConsumeFuel")]
+        void OnConsumeFuel(BaseOven oven,Item fuel, ItemModBurnable burnable)
+        {
+            HuntRPGInstance.OnConsumeFuel(oven, fuel, burnable);
         }
 
         [HookMethod("OnBuildingBlockUpgrade")]
@@ -201,6 +225,11 @@ namespace Oxide.Plugins
         void OnServerSave()
         {
             HuntRPGInstance.SaveRPG();
+        }
+
+        public void LogToConsole(string message)
+        {
+            Puts(message);
         }
 
     }

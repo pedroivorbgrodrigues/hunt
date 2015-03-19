@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Hunt.RPG;
 using Hunt.RPG.Keys;
 using Newtonsoft.Json;
@@ -10,60 +13,86 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Hunt RPG", "PedraozauM / SW", "1.2.0", ResourceId = 841)]
+    [Info("Hunt RPG", "PedraozauM / SW", "1.2.3", ResourceId = 841)]
     public class HuntPlugin : RustPlugin
     {
-        private HuntRPG HuntRPGInstance;
+        private readonly HuntRPG HuntRPGInstance;
         private bool ServerInitialized;
-        private bool GenerateNewConfig;
+        private bool UpdateConfig;
+        private bool UpdatePlayerData;
         private DynamicConfigFile HuntDataFile;
 
         public HuntPlugin()
         {
             HasConfig = true;
+            HuntRPGInstance = new HuntRPG(this);
         }
 
         protected override void LoadDefaultConfig()
         {
-            GenerateNewConfig = true;
+            UpdateConfig = true;
             DefaultConfig();
         }
 
         private void DefaultConfig()
         {
-            if (!ServerInitialized)
+            if (!ServerInitialized && UpdateConfig)
             {
+                //this will only be called if there is not a config file, or it needs updating
+                Config[HK.ConfigVersion] = Version;
                 Config[HK.XPTable] = HuntTablesGenerator.GenerateXPTable(HK.MaxLevel, HK.BaseXP, HK.LevelMultiplier, HK.LevelModule, HK.ModuleReducer);
                 Config[HK.MessagesTable] = HuntTablesGenerator.GenerateMessageTable();
                 Config[HK.SkillTable] = HuntTablesGenerator.GenerateSkillTable();
+                SaveConfig();
             }
             else
             {
-                if (!GenerateNewConfig) return;
-                Puts("Item Table generated");
+                //this will be called only on serverinit if the config needs updating
                 Config[HK.ItemTable] = HuntTablesGenerator.GenerateItemTable();
-                HuntDataFile = Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
-                HuntDataFile[HK.Profile] = new Dictionary<string, RPGInfo>();
-                HuntDataFile[HK.Furnaces] = new Dictionary<string, string>();
-                Interface.GetMod().DataFileSystem.SaveDatafile(HK.DataFileName);
                 SaveConfig();
             }
-                
+
+            if (!UpdatePlayerData || !UpdateConfig) return;
+            // this will only be called if this version requires a data wipe and the config is outdated.
+            LogToConsole("This version needs a wipe to data file.");
+            LogToConsole("Dont worry levels will be kept! =]");
+            LogToConsole("Doing that now...");
+            LoadRPG(false);
+            var profiles = new Dictionary<string, RPGInfo>(ReadFromData<Dictionary<string, RPGInfo>>(HK.Profile));
+            var rpgInfos = new Dictionary<string, RPGInfo>();
+            foreach (var profile in profiles)
+            {
+                var steamId = profile.Key;
+                var player = BasePlayer.FindByID(Convert.ToUInt64(steamId)) ??
+                             BasePlayer.FindSleeping(Convert.ToUInt64(steamId));
+                var rpgInfo = new RPGInfo(player.displayName);
+                rpgInfos.Add(steamId, rpgInfo);
+                HuntRPGInstance.LevelUpPlayer(rpgInfo, profile.Value.Level);
+            }
+            LogToConsole("Data file updated!");
+            SaveRPG(rpgInfos, new Dictionary<string, string>());
+            UpdatePlayerData = false;
         }
 
-        private void LoadRPG()
+        private void LoadRPG(bool showMsgs = true)
         {
             LoadConfig();
+            if (showMsgs)
+                LogToConsole("Loading plugin data and config...");
             HuntDataFile = Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
             var rpgConfig = ReadFromData<Dictionary<string, RPGInfo>>(HK.Profile);
-            Puts("{0} profiles loaded", rpgConfig.Count.ToString());
+            if (showMsgs)
+                LogToConsole(String.Format("{0} profiles loaded", rpgConfig.Count));
             var playerFurnaces = ReadFromData<Dictionary<string, string>>(HK.Furnaces);
-            Puts("{0} furnaces loaded", rpgConfig.Count.ToString());
+            if (showMsgs)
+                LogToConsole(String.Format("{0} furnaces loaded", playerFurnaces.Count));
             var xpTable = ReadFromConfig<Dictionary<int, long>>(HK.XPTable);
             var messagesTable = ReadFromConfig<PluginMessagesConfig>(HK.MessagesTable);
             var skillTable = ReadFromConfig<Dictionary<string, Skill>>(HK.SkillTable);
-            var itemTable = ReadFromConfig<Dictionary<string, string>>(HK.ItemTable);
+            var itemTable = ReadFromConfig<Dictionary<string, ItemInfo>>(HK.ItemTable);
             HuntRPGInstance.ConfigRPG(messagesTable, xpTable, skillTable, itemTable, rpgConfig, playerFurnaces);
+            if (showMsgs)
+                LogToConsole("Data and config loaded!");
         }
 
         public T ReadFromConfig<T>(string configKey)
@@ -78,23 +107,23 @@ namespace Oxide.Plugins
             return JsonConvert.DeserializeObject<T>(serializeObject);
         }
 
-        public void SaveRPG(Dictionary<string, RPGInfo> rpgConfig, Dictionary<string, string> playersFurnaces)
+        public void SaveRPG(Dictionary<string, RPGInfo> rpgConfig, Dictionary<string, string> playersFurnaces, bool showMsgs = true)
         {
+            if (showMsgs)
+                LogToConsole("Data being saved...");
             HuntDataFile[HK.Profile] = rpgConfig;
             HuntDataFile[HK.Furnaces] = playersFurnaces;
-            Puts("{0} profiles saved", rpgConfig.Count.ToString());
-            Puts("{0} furnaces saved", playersFurnaces.Count.ToString());
             Interface.GetMod().DataFileSystem.SaveDatafile(HK.DataFileName);
-
+            if (!showMsgs) return;
+            LogToConsole(String.Format("{0} profiles saved", rpgConfig.Count));
+            LogToConsole(String.Format("{0} furnaces saved", playersFurnaces.Count));
+            LogToConsole("Data was saved successfully!");
         }
 
         [HookMethod("Init")]
         void Init()
         {
-            Puts("Hunt initialized!");
-            HuntRPGInstance = new HuntRPG(this);
-            if (HuntRPGInstance == null)
-                Puts("Problem initializating RPG Instance!");
+            LogToConsole(HuntRPGInstance == null ? "Problem initializating RPG Instance!" : "Hunt RPG initialized!");
         }
 
         [HookMethod("OnServerInitialized")]
@@ -115,12 +144,30 @@ namespace Oxide.Plugins
         private void Loaded()
         {
             Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
+            var configVersion = new VersionNumber();
+            if (Config[HK.ConfigVersion] != null)
+                configVersion = ReadFromConfig<VersionNumber>(HK.ConfigVersion);
+            if (Version.Equals(configVersion))
+            {
+                PrintToChat("<color=lightblue>Hunt</color>: RPG Loaded!");
+                PrintToChat("<color=lightblue>Hunt</color>: To see the Hunt RPG help type \"/hunt\" or \"/h\"");
+                return;
+            }
+            LogToConsole("Your config needs updating...Doing it now.");
+            Config.Clear();
+            UpdateConfig = true;
+            UpdatePlayerData = true;
+            var wasUpdated = UpdatePlayerData;
+            DefaultConfig();
+            LogToConsole("Config updated!");
+            foreach (var player in BasePlayer.activePlayerList)
+                HuntRPGInstance.PlayerInit(player, wasUpdated);
         }
 
         [HookMethod("OnPlayerInit")]
         void OnPlayerInit(BasePlayer player)
         {
-            HuntRPGInstance.PlayerInit(player);
+            HuntRPGInstance.PlayerInit(player, UpdatePlayerData);
         }
 
         [HookMethod("OnEntityAttacked")]
@@ -165,11 +212,11 @@ namespace Oxide.Plugins
             HuntRPGInstance.OnConsumeFuel(oven, fuel, burnable);
         }
 
-        [HookMethod("OnBuildingBlockUpgrade")]
-        object OnBuildingBlockUpgrade(BuildingBlock buildingBlock, BuildingGrade.Enum grade, BaseEntity.RPCMessage message)
+        [HookMethod("OnBuildingBlockDoUpgradeToGrade")]
+        object OnBuildingBlockUpgrade(BuildingBlock buildingBlock, BaseEntity.RPCMessage message, BuildingGrade.Enum grade)
         {
             HuntRPGInstance.OnBuildingBlockUpgrade(message.player, buildingBlock, grade);
-            return grade;
+            return null;
         }
 
 
@@ -229,7 +276,7 @@ namespace Oxide.Plugins
 
         public void LogToConsole(string message)
         {
-            Puts(message);
+            Puts(String.Format("Hunt: {0}",message));
         }
 
     }

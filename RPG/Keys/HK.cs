@@ -2,6 +2,7 @@
 {
     static class HK
     {
+        public const string ConfigVersion = "VERSION";
         public const string DataFileName = "Hunt_Data";
         public const string Profile = "PROFILE";
         public const string Furnaces = "FURNACES";

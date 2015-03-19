@@ -124,8 +124,8 @@ namespace Hunt.RPG
                 Skills.Add(skill.Name, pointsToAdd);
             }
             SkillPoints -= requiredPoints;
-            reason = "";
-            return points;
+            reason = pointsToAdd <= 0 ? HMK.AlreadyAtMaxLevel : "";
+            return pointsToAdd;
         }
 
         public string SteamName { get; set; }

@@ -70,6 +70,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RPG\HuntTablesGenerator.cs" />
     <Compile Include="RPG\HuntRPG.cs" />
+    <Compile Include="RPG\ItemInfo.cs" />
     <Compile Include="RPG\Keys\HK.cs" />
     <Compile Include="RPG\Keys\HMK.cs" />
     <Compile Include="RPG\Keys\HRK.cs" />
@@ -77,6 +78,9 @@
     <Compile Include="RPG\RPGInfo.cs" />
     <Compile Include="RPG\Skill.cs" />
     <Compile Include="RPG\SkillMethods.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Suggestions.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

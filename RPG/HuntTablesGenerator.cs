@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Hunt.RPG.Keys;
 
 namespace Hunt.RPG
@@ -40,15 +38,20 @@ namespace Hunt.RPG
                 "To spend your available stats points, type \"/hunt statset <stats> <points> \". Ex: /hunt statset agi 3",
                 "To spend your available skill points, type \"/hunt skillset <skillname> <points> \". Ex: /hunt skillset lumberjack 1",
             });
-            messagesConfig.AddMessage("shortcuts", new List<string>
+            messagesConfig.AddMessage(HMK.Shortcuts, new List<string>
             {
                 "\"/hunt\" = \"/h\"",
                 "\"/hunt profile\" = \"/h p\"",
-                "\"/hunt statset\" = \"/h sts\"",
+                "\"/hunt statset\" = \"/h sts\".",
+                "You can set multiple stats at a time like this \"/h sts agi 30 str 45\".",
                 "\"/hunt skillset\" = \"/h sks\"",
+                "You can set multiple skillpoints at a time like this \"/h sks lumberjack 3 miner 2\".",
                 "\"/hunt health\" = \"/h h\"",
             });            
             messagesConfig.AddMessage(HMK.About, HuntAbout());
+            messagesConfig.AddMessage(HMK.DataUpdated, "Plugin was updated to new version!");
+            messagesConfig.AddMessage(HMK.DataUpdated, "Your profile needed to be reset, but your level was saved. You just need to redistribute.");
+            messagesConfig.AddMessage(HMK.DataUpdated, "Furnaces were not saved though, so build new ones for the blacksmith skill to be applied (If you have, or when you get it)!");
             messagesConfig.AddMessage(HMK.InvalidCommand, "You ran the \"{0}\" command incorrectly. Type \"/hunt help\" to get help");
             messagesConfig.AddMessage(HMK.SkillInfo, "Type \"/hunt skill <skillname>\" to see the skill info");
             messagesConfig.AddMessage(HMK.NotEnoughtPoints, "You don't have enought points to set!");
@@ -59,6 +62,7 @@ namespace Hunt.RPG
             messagesConfig.AddMessage(HMK.InvalidSkillName, "There is no such skill! Type \"/hunt skilllist\" to see the available skills");
             messagesConfig.AddMessage(HMK.ItemNotFound, "Item {0} not found.");
             messagesConfig.AddMessage(HMK.SkillNotLearned, "You havent learned this skill yet.");
+            messagesConfig.AddMessage(HMK.AlreadyAtMaxLevel, "You have mastered this skill already!");
             return messagesConfig;
         }
 
@@ -108,10 +112,19 @@ namespace Hunt.RPG
             return skillTable;
         }
 
-        public static Dictionary<string, string> GenerateItemTable()
+        public static Dictionary<string, ItemInfo> GenerateItemTable()
         {
+            var itemDict = new Dictionary<string, ItemInfo>();
             var itemsDefinition = ItemManager.GetItemDefinitions();
-            return itemsDefinition.ToDictionary(itemdef => itemdef.displayName.translated.ToLower(), itemdef => itemdef.shortname);
+            foreach (var itemDefinition in itemsDefinition)
+            {
+                var newInfo = new ItemInfo {Shortname = itemDefinition.shortname};
+                var blueprint = ItemManager.FindBlueprint(itemDefinition);
+                if (blueprint != null)
+                    newInfo.BlueprintTime = blueprint.time;
+                itemDict.Add(itemDefinition.displayName.translated, newInfo);
+            }
+            return itemDict;
         }
 
         public static Dictionary<ItemCategory, int> GenerateResearchTable()

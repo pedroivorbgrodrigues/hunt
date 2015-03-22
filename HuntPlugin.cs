@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using Hunt.RPG;
 using Hunt.RPG.Keys;
 using Newtonsoft.Json;
@@ -13,7 +10,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Hunt RPG", "PedraozauM / SW", "1.2.3", ResourceId = 841)]
+    [Info("Hunt RPG", "PedraozauM / SW", "1.2.6", ResourceId = 841)]
     public class HuntPlugin : RustPlugin
     {
         private readonly HuntRPG HuntRPGInstance;
@@ -80,10 +77,10 @@ namespace Oxide.Plugins
             if (showMsgs)
                 LogToConsole("Loading plugin data and config...");
             HuntDataFile = Interface.GetMod().DataFileSystem.GetDatafile(HK.DataFileName);
-            var rpgConfig = ReadFromData<Dictionary<string, RPGInfo>>(HK.Profile);
+            var rpgConfig = ReadFromData<Dictionary<string, RPGInfo>>(HK.Profile) ?? new Dictionary<string, RPGInfo>();
             if (showMsgs)
                 LogToConsole(String.Format("{0} profiles loaded", rpgConfig.Count));
-            var playerFurnaces = ReadFromData<Dictionary<string, string>>(HK.Furnaces);
+            var playerFurnaces = ReadFromData<Dictionary<string, string>>(HK.Furnaces) ?? new Dictionary<string, string>();
             if (showMsgs)
                 LogToConsole(String.Format("{0} furnaces loaded", playerFurnaces.Count));
             var xpTable = ReadFromConfig<Dictionary<int, long>>(HK.XPTable);
@@ -180,6 +177,12 @@ namespace Oxide.Plugins
             return hitInfo;
         }
 
+        [HookMethod("OnPlayerAttack")]
+        object OnPlayerAttack(BasePlayer player, HitInfo hitInfo)
+        {
+            return HuntRPGInstance.OnPlayerAttack(player, hitInfo) ? true as object : null;
+        }
+
         [HookMethod("OnEntityDeath")]
         void OnEntityDeath(MonoBehaviour entity, HitInfo hitinfo)
         {
@@ -274,10 +277,36 @@ namespace Oxide.Plugins
             HuntRPGInstance.SaveRPG();
         }
 
+        public void TeleportPlayerTo(BasePlayer player, Vector3 position)
+        {
+            ForcePlayerPosition(player, position);
+        }
+
+        public Vector3? GetGround(Vector3 position)
+        {
+            var direction = Vector3.forward;
+            var raycastHits = Physics.RaycastAll(position, direction, 50f).GetEnumerator();
+            float nearestDistance = 9999f;
+            Vector3? nearestPoint = null;
+            while (raycastHits.MoveNext())
+            {
+                var hit = (raycastHits.Current);
+                if (hit != null)
+                {
+                    RaycastHit raycastHit = (RaycastHit)hit;
+                    if (raycastHit.distance < nearestDistance)
+                    {
+                        nearestDistance = raycastHit.distance;
+                        nearestPoint = raycastHit.point;
+                    }
+                }
+            }
+            return nearestPoint;
+        }
+
         public void LogToConsole(string message)
         {
             Puts(String.Format("Hunt: {0}",message));
         }
-
     }
 }

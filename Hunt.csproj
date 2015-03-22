@@ -74,13 +74,13 @@
     <Compile Include="RPG\Keys\HK.cs" />
     <Compile Include="RPG\Keys\HMK.cs" />
     <Compile Include="RPG\Keys\HRK.cs" />
+    <Compile Include="RPG\Keys\OC.cs" />
     <Compile Include="RPG\PluginMessagesConfig.cs" />
+    <Compile Include="RPG\ProfilePreferences.cs" />
+    <Compile Include="RPG\RPGHelper.cs" />
     <Compile Include="RPG\RPGInfo.cs" />
     <Compile Include="RPG\Skill.cs" />
     <Compile Include="RPG\SkillMethods.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Suggestions.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -2,6 +2,7 @@
 {
     static class HRK
     {
+        public const string BlinkArrow = "blinkarrow";
         public const string Blacksmith = "blacksmith";
         public const string Researcher = "researcher";
         public const string LumberJack = "lumberjack";

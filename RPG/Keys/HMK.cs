@@ -2,6 +2,8 @@
 {
     static class HMK
     {
+        public const string ProfilePreferences = "preferences";
+        public const string Help = "help";
         public const string Shortcuts = "hunt_shortcuts";
         public const string DataUpdated = "data_updated";
         public const string AlreadyAtMaxLevel = "already_at_max_level";

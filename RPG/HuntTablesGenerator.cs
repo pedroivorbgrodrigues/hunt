@@ -25,14 +25,14 @@ namespace Hunt.RPG
         public static PluginMessagesConfig GenerateMessageTable()
         {
             var messagesConfig = new PluginMessagesConfig("Hunt", "lightblue");
-            messagesConfig.AddMessage("help", new List<string>
+            messagesConfig.AddMessage(HMK.Help, new List<string>
             {
                 "To get an overview about the Hunt RPG, type \"/hunt about\"",
                 "To see you available shortcuts commdands, type \"/hunt shortcuts\"",
-                "To see you current xp, type \"/hunt xp\"",
-                "To see change the % changed need to show the xp message, type \"/hunt xp% <percentnumber>\"",
-                "To see you current health, type \"/hunt health\"",
                 "To see you player profile, type \"/hunt profile\"",
+                "To see you current xp, type \"/hunt xp\"",
+                "To see how to change you profile preferences, type \"/hunt profilepreferences\"",
+                "To see you current health, type \"/hunt health\"",
                 "To see the skill list type \"/hunt skilllist\"",
                 "To see info about a specific skill type \"/hunt skill <skillname>\"",
                 "To spend your available stats points, type \"/hunt statset <stats> <points> \". Ex: /hunt statset agi 3",
@@ -42,27 +42,35 @@ namespace Hunt.RPG
             {
                 "\"/hunt\" = \"/h\"",
                 "\"/hunt profile\" = \"/h p\"",
+                "\"/hunt profilepreferences\" = \"/h pp\"",
                 "\"/hunt statset\" = \"/h sts\".",
                 "You can set multiple stats at a time like this \"/h sts agi 30 str 45\".",
                 "\"/hunt skillset\" = \"/h sks\"",
                 "You can set multiple skillpoints at a time like this \"/h sks lumberjack 3 miner 2\".",
                 "\"/hunt health\" = \"/h h\"",
-            });            
+            });
+            messagesConfig.AddMessage(HMK.ProfilePreferences, new List<string>()
+            {
+                "To see change the % changed need to show the xp message, type \"/hunt xp% <percentnumber>\"",
+                "To toggle crafting message type \"/hunt craftmsg\"",
+                "To toggle blink arrow skill type \"/hunt ba\"",
+                "To toggle blink arrow skill auto toggle type \"/hunt aba\"",
+            });         
             messagesConfig.AddMessage(HMK.About, HuntAbout());
-            messagesConfig.AddMessage(HMK.DataUpdated, "Plugin was updated to new version!");
-            messagesConfig.AddMessage(HMK.DataUpdated, "Your profile needed to be reset, but your level was saved. You just need to redistribute.");
-            messagesConfig.AddMessage(HMK.DataUpdated, "Furnaces were not saved though, so build new ones for the blacksmith skill to be applied (If you have, or when you get it)!");
-            messagesConfig.AddMessage(HMK.InvalidCommand, "You ran the \"{0}\" command incorrectly. Type \"/hunt help\" to get help");
+            messagesConfig.AddMessage(HMK.DataUpdated, RPGHelper.WrapInColor("Plugin was updated to new version!", OC.Yellow));
+            messagesConfig.AddMessage(HMK.DataUpdated, RPGHelper.WrapInColor("Your profile needed to be reset, but your level was saved. You just need to redistribute."));
+            messagesConfig.AddMessage(HMK.DataUpdated, RPGHelper.WrapInColor("Furnaces were not saved though, so build new ones for the blacksmith skill to be applied (If you have, or when you get it)!", OC.Red));
+            messagesConfig.AddMessage(HMK.InvalidCommand, "You ran the \"{0}\" command incorrectly. Type \"/hunt\" to get help");
             messagesConfig.AddMessage(HMK.SkillInfo, "Type \"/hunt skill <skillname>\" to see the skill info");
-            messagesConfig.AddMessage(HMK.NotEnoughtPoints, "You don't have enought points to set!");
-            messagesConfig.AddMessage(HMK.NotEnoughLevels, "You dont have the minimum level to learn this skill!");
-            messagesConfig.AddMessage(HMK.NotEnoughStrength, "You dont have enough strenght to learn this skill!");
-            messagesConfig.AddMessage(HMK.NotEnoughAgility, "You dont have enough agility to learn this skill!");
-            messagesConfig.AddMessage(HMK.NotEnoughIntelligence, "You dont have enough intelligence to learn this skill!");
-            messagesConfig.AddMessage(HMK.InvalidSkillName, "There is no such skill! Type \"/hunt skilllist\" to see the available skills");
-            messagesConfig.AddMessage(HMK.ItemNotFound, "Item {0} not found.");
-            messagesConfig.AddMessage(HMK.SkillNotLearned, "You havent learned this skill yet.");
-            messagesConfig.AddMessage(HMK.AlreadyAtMaxLevel, "You have mastered this skill already!");
+            messagesConfig.AddMessage(HMK.NotEnoughtPoints, RPGHelper.WrapInColor("You don't have enought points to set!"));
+            messagesConfig.AddMessage(HMK.NotEnoughLevels, RPGHelper.WrapInColor("You dont have the minimum level to learn this skill!"));
+            messagesConfig.AddMessage(HMK.NotEnoughStrength, RPGHelper.WrapInColor("You dont have enough strenght to learn this skill!"));
+            messagesConfig.AddMessage(HMK.NotEnoughAgility, RPGHelper.WrapInColor("You dont have enough agility to learn this skill!"));
+            messagesConfig.AddMessage(HMK.NotEnoughIntelligence, RPGHelper.WrapInColor("You dont have enough intelligence to learn this skill!"));
+            messagesConfig.AddMessage(HMK.InvalidSkillName, RPGHelper.WrapInColor("There is no such skill! Type \"/hunt skilllist\" to see the available skills"));
+            messagesConfig.AddMessage(HMK.ItemNotFound, RPGHelper.WrapInColor("Item {0} not found."));
+            messagesConfig.AddMessage(HMK.SkillNotLearned, RPGHelper.WrapInColor("You havent learned this skill yet."));
+            messagesConfig.AddMessage(HMK.AlreadyAtMaxLevel, RPGHelper.WrapInColor("You have mastered this skill already!"));
             return messagesConfig;
         }
 
@@ -102,13 +110,20 @@ namespace Hunt.RPG
             skillTable.Add(HRK.Hunter, hunter);
             var researcher = new Skill(HRK.Researcher, "This skill allows you to research items you have. Each level enables a type of type to be researched and decreases 2 minutes of cooldown. Table: Level 1 - Tools (10 min); Level 2 - Clothes (8 min); Level 3 - Construction and Resources (6 min); Level 4 - Ammunition and Medic (4 min); Level 5 - Weapons (2 min)", 30, 5);
             researcher.SkillpointsPerLevel = 7;
+            researcher.Usage = "To research an item type \"/research \"Item Name\" \". In order to research an item, you must have it on your invetory, and have the required skill level for that item tier.";
             researcher.AddRequiredStat("int", (int) Math.Floor(researcher.RequiredLevel*2.5d));
             researcher.AddModifier(HRK.CooldownModifier, new Modifier(HRK.CooldownModifier, new List<object>() {10,2}));
             skillTable.Add(HRK.Researcher, researcher);
             var blacksmith = new Skill(HRK.Blacksmith, "This skill allows your furnaces to melt more resources each time. Each level gives increase the productivity by 1.",30, 5);
             blacksmith.SkillpointsPerLevel = 7;
-            blacksmith.AddRequiredStat("str", (int)Math.Floor(researcher.RequiredLevel * 2.5d));
+            blacksmith.AddRequiredStat("str", (int)Math.Floor(blacksmith.RequiredLevel * 2.5d));
             skillTable.Add(HRK.Blacksmith, blacksmith);
+            var blinkarrow = new Skill(HRK.BlinkArrow, "This skill allows you to blink to your arrow destination from time to time. Each level deacreases the cooldown in 2 minutes.", 70, 5);
+            blinkarrow.Usage = "Just shoot an Arrow at desired blink location. To toogle this skill type \"/h ba\" . To change the auto toggle for this skill type \"/h aba\"";
+            blinkarrow.AddModifier(HRK.CooldownModifier, new Modifier(HRK.CooldownModifier, new List<object>() {9, 2}));
+            blinkarrow.SkillpointsPerLevel = 10;
+            blinkarrow.AddRequiredStat("agi", (int)Math.Floor(blinkarrow.RequiredLevel * 2.5d));
+            skillTable.Add(HRK.BlinkArrow, blinkarrow);
             return skillTable;
         }
 
@@ -122,7 +137,7 @@ namespace Hunt.RPG
                 var blueprint = ItemManager.FindBlueprint(itemDefinition);
                 if (blueprint != null)
                     newInfo.BlueprintTime = blueprint.time;
-                itemDict.Add(itemDefinition.displayName.translated, newInfo);
+                itemDict.Add(itemDefinition.displayName.translated.ToLower(), newInfo);
             }
             return itemDict;
         }
@@ -154,3 +169,4 @@ namespace Hunt.RPG
         }
     }
 }
+

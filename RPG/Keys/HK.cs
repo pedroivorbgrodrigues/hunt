@@ -16,6 +16,5 @@
         public const int LevelModule = 10;
         public const float ModuleReducer = 0.005f;
         public const float DeathReducer = 0.05f;
-
     }
 }

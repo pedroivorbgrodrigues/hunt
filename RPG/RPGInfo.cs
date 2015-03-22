@@ -11,7 +11,7 @@ namespace Hunt.RPG
             SteamName = steamName;
             Level = 0;
             Skills = new Dictionary<string, int>();
-            ShowXPMessagePercent = 0.01f;
+            Preferences = new ProfilePreferences();
         }
 
         public bool AddExperience(long xp,long requiredXp)
@@ -115,7 +115,8 @@ namespace Hunt.RPG
                 int existingPoints = Skills[skill.Name];
                 if (existingPoints + points > skill.MaxPoints)
                     pointsToAdd = skill.MaxPoints - existingPoints;
-                Skills[skill.Name] += pointsToAdd;
+                if(pointsToAdd >  0)
+                    Skills[skill.Name] += pointsToAdd;
             }
             else
             {
@@ -123,8 +124,14 @@ namespace Hunt.RPG
                     pointsToAdd = skill.MaxPoints;
                 Skills.Add(skill.Name, pointsToAdd);
             }
-            SkillPoints -= requiredPoints;
-            reason = pointsToAdd <= 0 ? HMK.AlreadyAtMaxLevel : "";
+            
+            if (pointsToAdd <= 0)
+            {
+                reason = HMK.AlreadyAtMaxLevel;
+                return 0;
+            }
+            reason = "";
+            SkillPoints -= pointsToAdd * skill.SkillpointsPerLevel;
             return pointsToAdd;
         }
 
@@ -138,7 +145,7 @@ namespace Hunt.RPG
         public int SkillPoints { get; set; }
         public Dictionary<string,int> Skills { get; set; }
 
-        public float ShowXPMessagePercent { get; set; }
+        public ProfilePreferences Preferences { get; set; }
 
     }
 }

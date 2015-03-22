@@ -107,9 +107,12 @@ namespace Hunt
             while ((line = file.ReadLine()) != null)
             {
                 var isReferenceLine = line.StartsWith("using");
+                var strings = line.Split(' ');
                 if (isReferenceLine)
                 {
-                    var referenceLine = line.Split(' ')[1];
+                    var referenceLine = "";
+                    for (int i = 1; i < strings.Length; i++)
+                        referenceLine += strings[i];
                     if (!References.Contains(referenceLine))
                         References.Add(referenceLine);
                     continue;
@@ -118,7 +121,7 @@ namespace Hunt
                 var isNamespaceLine = line.StartsWith("namespace");
                 if (isNamespaceLine)
                 {
-                    namespaceLine = line.Split(' ')[1];
+                    namespaceLine = strings[1];
                     continue;
                 }
                 var isBrackAtStart = line.StartsWith(StartNamespace) || line.StartsWith(EndNamespace);

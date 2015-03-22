@@ -38,8 +38,8 @@ namespace Hunt.RPG
 
         public string Name { get; set; }
         public string Description { get; set; }
+        public string Usage { get; set; }
         public int RequiredLevel { get; set; }
-
         public int MaxPoints { get; set; }
         public Dictionary<string,int> RequiredSkills { get; set; }
         public Dictionary<string, Modifier> Modifiers { get; set;}
